@@ -200,30 +200,129 @@ Explicitamente excluído. Documentado para prevenir scope creep.
 
 ## Traceability
 
-Mapeamento de cada requisito para sua fase do roadmap. Atualizada quando o roadmap é criado/revisado.
+Mapeamento de cada requisito v1 para sua fase do roadmap (cada REQ-ID aparece em exatamente uma fase).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 a FOUND-16 | Phase 0 | Pending |
-| AUTH-01 a AUTH-05 | Phase 0/1 | Pending |
-| TENA-01 a TENA-08 | Phase 0/1 | Pending |
-| LGPD-01 a LGPD-06 | Phase 1 | Pending |
-| ORG-01 a ORG-17 | Phase 1 | Pending |
-| FORN-01 a FORN-18 | Phase 2 | Pending |
-| PREST-01 a PREST-05 | Phase 3 | Pending |
-| BILL-01 a BILL-05 | Phase 3 | Pending |
-| TIC-01 a TIC-06 | Phase 4 | Pending |
-| FNB-01 a FNB-03 | Phase 4 | Pending |
-| MKT-01 a MKT-06 | Phase 4 | Pending |
-| INT-01 a INT-04 | Phase 4 | Pending |
-| LGPD-07, LGPD-08 | Phase 4 | Pending |
-| OPS-01 a OPS-06 | Phase 4 | Pending |
+| FOUND-01 | Phase 0 | Pending |
+| FOUND-02 | Phase 0 | Pending |
+| FOUND-03 | Phase 0 | Pending |
+| FOUND-04 | Phase 0 | Pending |
+| FOUND-05 | Phase 0 | Pending |
+| FOUND-06 | Phase 0 | Pending |
+| FOUND-07 | Phase 0 | Pending |
+| FOUND-08 | Phase 0 | Pending |
+| FOUND-09 | Phase 0 | Pending |
+| FOUND-10 | Phase 0 | Pending |
+| FOUND-11 | Phase 0 | Pending |
+| FOUND-12 | Phase 0 | Pending |
+| FOUND-13 | Phase 0 | Pending |
+| FOUND-14 | Phase 0 | Pending |
+| FOUND-15 | Phase 0 | Pending |
+| FOUND-16 | Phase 0 | Pending |
+| AUTH-01 | Phase 0 | Pending |
+| AUTH-02 | Phase 0 | Pending |
+| AUTH-03 | Phase 0 | Pending |
+| AUTH-04 | Phase 0 | Pending |
+| AUTH-05 | Phase 0 | Pending |
+| TENA-01 | Phase 0 | Pending |
+| TENA-02 | Phase 0 | Pending |
+| TENA-03 | Phase 0 | Pending |
+| TENA-04 | Phase 0 | Pending |
+| TENA-05 | Phase 0 | Pending |
+| TENA-06 | Phase 0 | Pending |
+| TENA-07 | Phase 0 | Pending |
+| TENA-08 | Phase 0 | Pending |
+| LGPD-01 | Phase 0 | Pending |
+| LGPD-02 | Phase 0 | Pending |
+| LGPD-03 | Phase 0 | Pending |
+| LGPD-04 | Phase 0 | Pending |
+| LGPD-05 | Phase 0 | Pending |
+| LGPD-06 | Phase 0 | Pending |
+| ORG-01 | Phase 1 | Pending |
+| ORG-02 | Phase 1 | Pending |
+| ORG-03 | Phase 1 | Pending |
+| ORG-04 | Phase 1 | Pending |
+| ORG-05 | Phase 1 | Pending |
+| ORG-06 | Phase 1 | Pending |
+| ORG-07 | Phase 1 | Pending |
+| ORG-08 | Phase 1 | Pending |
+| ORG-09 | Phase 1 | Pending |
+| ORG-10 | Phase 1 | Pending |
+| ORG-11 | Phase 1 | Pending |
+| ORG-12 | Phase 1 | Pending |
+| ORG-13 | Phase 1 | Pending |
+| ORG-14 | Phase 1 | Pending |
+| ORG-15 | Phase 1 | Pending |
+| ORG-16 | Phase 1 | Pending |
+| ORG-17 | Phase 1 | Pending |
+| FORN-01 | Phase 2 | Pending |
+| FORN-02 | Phase 2 | Pending |
+| FORN-03 | Phase 2 | Pending |
+| FORN-04 | Phase 2 | Pending |
+| FORN-05 | Phase 2 | Pending |
+| FORN-06 | Phase 2 | Pending |
+| FORN-07 | Phase 2 | Pending |
+| FORN-08 | Phase 2 | Pending |
+| FORN-09 | Phase 2 | Pending |
+| FORN-10 | Phase 2 | Pending |
+| FORN-11 | Phase 2 | Pending |
+| FORN-12 | Phase 2 | Pending |
+| FORN-13 | Phase 2 | Pending |
+| FORN-14 | Phase 2 | Pending |
+| FORN-15 | Phase 2 | Pending |
+| FORN-16 | Phase 2 | Pending |
+| FORN-17 | Phase 2 | Pending |
+| FORN-18 | Phase 2 | Pending |
+| PREST-01 | Phase 3 | Pending |
+| PREST-02 | Phase 3 | Pending |
+| PREST-03 | Phase 3 | Pending |
+| PREST-04 | Phase 3 | Pending |
+| PREST-05 | Phase 3 | Pending |
+| BILL-01 | Phase 3 | Pending |
+| BILL-02 | Phase 3 | Pending |
+| BILL-03 | Phase 3 | Pending |
+| BILL-04 | Phase 3 | Pending |
+| BILL-05 | Phase 3 | Pending |
+| TIC-01 | Phase 4 | Pending |
+| TIC-02 | Phase 4 | Pending |
+| TIC-03 | Phase 4 | Pending |
+| TIC-04 | Phase 4 | Pending |
+| TIC-05 | Phase 4 | Pending |
+| TIC-06 | Phase 4 | Pending |
+| FNB-01 | Phase 4 | Pending |
+| FNB-02 | Phase 4 | Pending |
+| FNB-03 | Phase 4 | Pending |
+| MKT-01 | Phase 4 | Pending |
+| MKT-02 | Phase 4 | Pending |
+| MKT-03 | Phase 4 | Pending |
+| MKT-04 | Phase 4 | Pending |
+| MKT-05 | Phase 4 | Pending |
+| MKT-06 | Phase 4 | Pending |
+| INT-01 | Phase 4 | Pending |
+| INT-02 | Phase 4 | Pending |
+| INT-03 | Phase 4 | Pending |
+| INT-04 | Phase 4 | Pending |
+| LGPD-07 | Phase 4 | Pending |
+| LGPD-08 | Phase 4 | Pending |
+| OPS-01 | Phase 4 | Pending |
+| OPS-02 | Phase 4 | Pending |
+| OPS-03 | Phase 4 | Pending |
+| OPS-04 | Phase 4 | Pending |
+| OPS-05 | Phase 4 | Pending |
+| OPS-06 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 92 total (FOUND:16 + AUTH:5 + TENA:8 + LGPD:6+2 + ORG:17 + FORN:18 + PREST:5 + BILL:5 + TIC:6 + FNB:3 + MKT:6 + INT:4 + OPS:6)
-- Mapeamento detalhado para fases ocorre na criação do ROADMAP.md (próximo passo)
-- Unmapped: 0 — todos têm fase tentativa pré-mapeada acima
+- v1 requirements: **107 total** (FOUND:16 + AUTH:5 + TENA:8 + LGPD:6 + ORG:17 + FORN:18 + PREST:5 + BILL:5 + TIC:6 + FNB:3 + MKT:6 + INT:4 + LGPD(v4):2 + OPS:6)
+- Phase 0: 35 requirements (FOUND:16 + AUTH:5 + TENA:8 + LGPD:6)
+- Phase 1: 17 requirements (ORG:17)
+- Phase 2: 18 requirements (FORN:18)
+- Phase 3: 10 requirements (PREST:5 + BILL:5)
+- Phase 4: 27 requirements (TIC:6 + FNB:3 + MKT:6 + INT:4 + LGPD:2 + OPS:6)
+- **Mapped: 107/107** — todos os REQ-IDs em exatamente uma fase ✓
+- Unmapped: 0
+- Duplicated: 0
 
 ---
 *Requirements defined: 2026-06-11*
-*Last updated: 2026-06-11 after initial definition (synthesized from research SUMMARY.md + PROJECT.md)*
+*Last updated: 2026-06-11 after roadmap creation (per-REQ-ID phase mapping)*
