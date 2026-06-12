@@ -104,11 +104,15 @@ export async function recordConsentMetadata(raw: unknown): Promise<RecordConsent
   // policies on top of this STUB schema) is satisfied.
   try {
     await withTenant(tenantId, async (scopedDb) => {
+      // Plan 05: consent_ip column was renamed to ip_address; consent_text
+      // column was added with default '' so omitting it from Plan 04 callers
+      // stays valid. Both edits are backward-compatible with this code path.
       await scopedDb.insert(consentRecords).values({
         userId,
         tenantId: tenantId as string,
         consentVersion: parsed.data.consentVersion,
-        consentIp: ipAddress,
+        consentText: parsed.data.consentText ?? '',
+        ipAddress,
         userAgent,
       })
     })

@@ -55,7 +55,7 @@ afterEach(async () => {
   // CASCADE deletes children (member, session, invitation) when an
   // organization or user is removed. Order is from most-dependent → root.
   await migratorPool`TRUNCATE TABLE
-    invitation, member, session, organization, consent_records,
+    audit_log, invitation, member, session, organization, consent_records,
     two_factor, verification, account, "user", tenants
     RESTART IDENTITY CASCADE`
 })
