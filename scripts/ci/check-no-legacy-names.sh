@@ -32,6 +32,13 @@ if [ "${#SCAN_DIRS[@]}" -eq 0 ]; then
 fi
 
 # Use grep -r with multiple --include masks. Exclude the gate script itself.
+#
+# Markdown is intentionally NOT scanned — `.github/CONTRIBUTING.md` and the
+# anti-pitfall docs legitimately reference `fb_apu01..04` when explaining
+# what the gate catches. Markdown does not get compiled or executed, so a
+# legacy-name mention in prose is documentation, not drift. The gate's
+# load-bearing job is to catch the name in runtime code paths
+# (TS/JS/JSON imports, workflow `run:` blocks, scripts, Dockerfiles).
 HITS=$(grep -rn 'fb_apu0[1-9]' "${SCAN_DIRS[@]}" \
   --include='*.ts' --include='*.tsx' \
   --include='*.js' --include='*.jsx' \
@@ -39,7 +46,6 @@ HITS=$(grep -rn 'fb_apu0[1-9]' "${SCAN_DIRS[@]}" \
   --include='*.yml' --include='*.yaml' \
   --include='*.sh' \
   --include='Dockerfile*' --include='*.dockerfile' \
-  --include='*.md' \
   --exclude='check-no-legacy-names.sh' \
   2>/dev/null || true)
 
