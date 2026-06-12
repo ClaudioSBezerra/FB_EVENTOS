@@ -49,7 +49,7 @@ afterEach(async () => {
   // organization or user is removed. Order is from most-dependent → root.
   await migratorPool`TRUNCATE TABLE
     invitation, member, session, organization, consent_records,
-    verification, account, "user", tenants
+    two_factor, verification, account, "user", tenants
     RESTART IDENTITY CASCADE`
 })
 

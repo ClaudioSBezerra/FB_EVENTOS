@@ -63,8 +63,24 @@ export const user = pgTable('user', {
   consentVersion: text('consent_version'),
   consentAt: timestamp('consent_at', { withTimezone: true }),
   consentIp: text('consent_ip'),
+  // AUTH-05 — Better Auth twoFactor plugin column (added in Plan 04 migration 0003).
+  twoFactorEnabled: boolean('two_factor_enabled').default(false),
   // LGPD-05 soft-delete (Plan 05 wires query helpers).
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
+})
+
+/**
+ * Better Auth two-factor secrets table (Plan 04 — AUTH-05).
+ * One row per user that has enrolled TOTP. NOT tenant-scoped — 2FA is a
+ * user-level setting that follows the user across all orgs.
+ */
+export const twoFactor = pgTable('two_factor', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  secret: text('secret').notNull(),
+  backupCodes: text('backup_codes').notNull(),
 })
 
 /**
