@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# FB_EVENTOS — drizzle-kit push ban (Plan 02 / RESEARCH Pitfall 4 / T-0-03).
+#
+# `drizzle-kit push` is the destructive "sync schema to DB without generating
+# a migration file" command. It produces no reviewable artifact, no rollback
+# path, and silently drops columns when the in-code schema diverges from the
+# live DB — exactly the failure mode FB_APU04's `DROP TABLE schema_migrations`
+# auto-heal exhibited.
+#
+# Migrations in FB_EVENTOS go through `drizzle-kit generate` + `drizzle-kit
+# migrate` only. This gate blocks any CI workflow, script, docker invocation,
+# or package.json script that calls `drizzle-kit push`.
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$REPO_ROOT"
+
+SCAN_PATHS=()
+for p in .github scripts docker package.json; do
+  [ -e "$p" ] && SCAN_PATHS+=("$p")
+done
+
+if [ "${#SCAN_PATHS[@]}" -eq 0 ]; then
+  echo "check-no-drizzle-push: OK (no scan targets present yet)"
+  exit 0
+fi
+
+# Match `drizzle-kit push` (any whitespace between tokens). Exclude this gate
+# script's own documentation of the banned regex.
+HITS=$(grep -rnE 'drizzle-kit[[:space:]]+push' "${SCAN_PATHS[@]}" \
+  --exclude='check-no-drizzle-push.sh' \
+  2>/dev/null || true)
+
+if [ -n "$HITS" ]; then
+  echo "::error::\`drizzle-kit push\` is contractually banned (RESEARCH Pitfall 4 / T-0-03). Use \`drizzle-kit generate\` + \`drizzle-kit migrate\` so every schema change ships as a reviewable migration file."
+  while IFS= read -r line; do
+    FILE=$(printf '%s' "$line" | cut -d: -f1)
+    LINENO=$(printf '%s' "$line" | cut -d: -f2)
+    MSG=$(printf '%s' "$line" | cut -d: -f3-)
+    echo "::error file=${FILE},line=${LINENO}::drizzle-kit push call detected: ${MSG}"
+  done <<< "$HITS"
+  exit 1
+fi
+
+echo "check-no-drizzle-push: OK (no drizzle-kit push invocations detected)"
+exit 0

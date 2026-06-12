@@ -16,6 +16,11 @@
     "lint:fix": "biome check --write src/",
     "format": "biome format --write src/",
     "prepare": "husky",
+    "check:db": "bash scripts/ci/check-no-embedded-db.sh",
+    "check:legacy": "bash scripts/ci/check-no-legacy-names.sh",
+    "check:drizzle": "bash scripts/ci/check-no-drizzle-push.sh",
+    "check:nextjs": "bash scripts/ci/check-nextjs-version.sh",
+    "check:all": "pnpm run check:db && pnpm run check:legacy && pnpm run check:drizzle && pnpm run check:nextjs",
     "docker:build:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-web:$(node -p \"require('./package.json').version\") -f docker/Dockerfile ."
   },
   "dependencies": {
