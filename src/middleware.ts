@@ -33,6 +33,11 @@ import { type NextRequest, NextResponse } from 'next/server'
 // The DB-bearing helpers (resolveTenantBySlug) live in '@/lib/tenant' which
 // pulls in Drizzle; middleware MUST NOT import that path.
 import { SYSTEM_PREFIXES } from '@/lib/tenant-prefixes'
+// NOTE (Plan 06): Pino is Node-only — it cannot be imported into Edge
+// middleware. We deliberately do NOT import @/lib/logger here. Request-id
+// log binding happens DOWNSTREAM in Server Components / Server Actions via
+// `childLogger({requestId: headers().get('x-request-id')})`. The middleware's
+// job is to PROPAGATE the header; consumption happens in the Node runtime.
 
 export function middleware(req: NextRequest): NextResponse {
   // 1. Request ID — preserve inbound or generate a fresh UUID.
