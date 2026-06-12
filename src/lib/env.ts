@@ -2,9 +2,20 @@
  * Centralized environment variable lookups.
  *
  * Phase 0 / Plan 01: stub that re-exports process.env values without validation.
- * Plan 03 replaces the body of this module with a Zod-validated parser that
- * fails fast at boot. All future imports continue to read from `env.*` and pick
- * up validation for free without touching call sites.
+ * Phase 0 / Plan 03: keys for DATABASE_URL + DATABASE_MIGRATOR_URL are now
+ * load-bearing for src/db/index.ts. Validation remains a TODO until Plan 04
+ * adds Zod (Zod 4 lands in Plan 04 to keep this plan's package surface
+ * focused). When Zod arrives, swap the body of this module for a fail-fast
+ * z.object({...}).parse(process.env) call — all call sites continue to read
+ * `env.X` and pick up validation for free.
+ *
+ * Required at runtime (no fallback):
+ *   - DATABASE_URL                 — fb_eventos_app role (Plan 03)
+ * Required at migration time only:
+ *   - DATABASE_MIGRATOR_URL        — fb_eventos_migrator role (Plan 03)
+ * Required at auth time:
+ *   - BETTER_AUTH_SECRET           — min 32 chars (Plan 04 will validate)
+ *   - BETTER_AUTH_URL              — (Plan 04)
  *
  * @see .env.example for the full key manifest.
  */
