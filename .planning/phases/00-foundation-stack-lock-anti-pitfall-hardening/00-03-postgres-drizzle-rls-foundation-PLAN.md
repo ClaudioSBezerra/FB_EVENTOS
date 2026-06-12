@@ -122,8 +122,8 @@ Output: Bootable Postgres+MinIO+Mailpit compose stack; two-role Postgres setup; 
 <context>
 @CLAUDE.md
 @.planning/research/ARCHITECTURE.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
 
 <interfaces>
 <!-- Required imports + signatures executor MUST use exactly. -->
@@ -161,7 +161,7 @@ DATABASE_MIGRATOR_URL=postgresql://fb_migrator:<pw>@localhost:5432/fb_eventos_de
   <name>Task 1: Install Drizzle + postgres.js, write docker-compose, draft schema with RLS policies</name>
   <files>package.json, docker/compose.yml, drizzle.config.ts, src/db/index.ts, src/db/migrate.ts, src/db/schema/index.ts, src/db/schema/tenants.ts, src/db/schema/roles.ts, src/db/schema/auth.ts, src/db/schema/consent.ts, src/lib/env.ts, scripts/db/setup-roles.sh</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Standard Stack", "Pattern 1: Drizzle RLS Schema with pgPolicy", "Pattern 2: Two-Role Postgres Setup", "Pattern 3: withTenant", "Pattern 7: Drizzle Config", "Local Dev Docker Compose")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Standard Stack", "Pattern 1: Drizzle RLS Schema with pgPolicy", "Pattern 2: Two-Role Postgres Setup", "Pattern 3: withTenant", "Pattern 7: Drizzle Config", "Local Dev Docker Compose")
     - .env.example (from Plan 01 — has DATABASE_URL + DATABASE_MIGRATOR_URL keys)
     - CLAUDE.md (sections "Core Technologies", "Multi-Tenancy Strategy")
   </read_first>
@@ -246,7 +246,7 @@ DATABASE_MIGRATOR_URL=postgresql://fb_migrator:<pw>@localhost:5432/fb_eventos_de
   <name>Task 2: [BLOCKING] Generate SQL migrations, write FORCE-RLS migration, apply migrations, verify table presence</name>
   <files>src/db/migrations/0000_roles_and_extensions.sql, src/db/migrations/0001_initial.sql, src/db/migrations/0002_force_rls.sql, src/db/migrations/meta/_journal.json, src/db/migrations/meta/0000_snapshot.json, src/db/migrations/meta/0001_snapshot.json, src/db/migrations/meta/0002_snapshot.json</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 1" — note the `ALTER TABLE ... FORCE ROW LEVEL SECURITY` requirement, "Pattern 2", "Pattern 9: LGPD Baseline Schema" — note the `CREATE EXTENSION IF NOT EXISTS pgcrypto/pg_trgm`)
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 1" — note the `ALTER TABLE ... FORCE ROW LEVEL SECURITY` requirement, "Pattern 2", "Pattern 9: LGPD Baseline Schema" — note the `CREATE EXTENSION IF NOT EXISTS pgcrypto/pg_trgm`)
     - src/db/schema/*.ts (from Task 1)
     - scripts/db/setup-roles.sh (from Task 1)
   </read_first>
@@ -333,8 +333,8 @@ DATABASE_MIGRATOR_URL=postgresql://fb_migrator:<pw>@localhost:5432/fb_eventos_de
   <name>Task 3: withTenant() wrapper + Vitest harness + three load-bearing RLS integration tests</name>
   <files>src/db/with-tenant.ts, vitest.config.ts, src/test/setup.ts, src/test/db.ts, tests/db/with-tenant.test.ts, tests/db/rls-forced.test.ts, tests/db/role-no-bypassrls.test.ts, package.json</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 3: withTenant", "Validation Architecture", "Pitfall 3: SET vs SET LOCAL")
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md (sections "Test Infrastructure", "Wave 0 Requirements")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 3: withTenant", "Validation Architecture", "Pitfall 3: SET vs SET LOCAL")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md (sections "Test Infrastructure", "Wave 0 Requirements")
     - src/db/schema/*.ts (from Task 1)
     - src/db/migrations/*.sql (from Task 2)
   </read_first>
@@ -467,7 +467,7 @@ DATABASE_MIGRATOR_URL=postgresql://fb_migrator:<pw>@localhost:5432/fb_eventos_de
 </success_criteria>
 
 <output>
-Create `.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-03-SUMMARY.md` listing:
+Create `.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-03-SUMMARY.md` listing:
 - Migration file names + what each does
 - `withTenant` import path + signature
 - The three load-bearing RLS tests + their assertion summaries

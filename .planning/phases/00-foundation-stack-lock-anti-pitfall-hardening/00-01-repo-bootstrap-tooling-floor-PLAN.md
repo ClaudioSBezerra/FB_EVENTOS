@@ -116,8 +116,8 @@ Output: A bootable Next.js 15 scaffold with pnpm lockfile, Biome config, Husky+g
 @.planning/PROJECT.md
 @.planning/ROADMAP.md
 @.planning/REQUIREMENTS.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
 
 <interfaces>
 <!-- Locked versions executor MUST use (extracted from RESEARCH.md Standard Stack). -->
@@ -151,7 +151,7 @@ engines (package.json):
   <files>package.json, pnpm-lock.yaml, tsconfig.json, .nvmrc, .gitignore, .dockerignore, next.config.ts, src/app/layout.tsx, src/app/page.tsx, src/app/globals.css, src/lib/env.ts, .env.example, .env.production.example, README.md</files>
   <read_first>
     - CLAUDE.md (sections "Technology Stack", "Version Compatibility", "Embedded-DB Anti-Pattern")
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Standard Stack", "Pattern 13: Environment Variables Manifest", "Bootstrap installation sequence")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Standard Stack", "Pattern 13: Environment Variables Manifest", "Bootstrap installation sequence")
   </read_first>
   <action>
     Run `pnpm create next-app@15 . --typescript --tailwind --app --src-dir --import-alias "@/*" --use-pnpm --no-eslint` from the project root (use `.` so it scaffolds in-place; DO NOT use `@latest` — that resolves to Next.js 16 per RESEARCH Pitfall 1). After scaffold:
@@ -203,7 +203,7 @@ engines (package.json):
   <name>Task 2: Install Biome 2 + Husky + gitleaks binary pre-commit hook</name>
   <files>package.json, biome.json, .husky/pre-commit, .husky/_/.gitignore, .gitleaks.toml, .gitattributes, scripts/install-gitleaks.sh</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Dev Tools", "Package Legitimacy Audit" — note `gitleaks` npm package is FAKE; install binary instead; "Pattern 12: CI Pipeline YAML" for the CI mirror)
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Dev Tools", "Package Legitimacy Audit" — note `gitleaks` npm package is FAKE; install binary instead; "Pattern 12: CI Pipeline YAML" for the CI mirror)
     - CLAUDE.md (section "Development Tools" lists Biome + gitleaks)
     - package.json (just created in Task 1)
   </read_first>
@@ -264,7 +264,7 @@ engines (package.json):
   <name>Task 3: Multi-stage Dockerfile + semver discipline + smoke build</name>
   <files>docker/Dockerfile, .dockerignore, package.json, docker/.env.docker.example</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 11: Multi-Stage Dockerfile")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 11: Multi-Stage Dockerfile")
     - CLAUDE.md (sections "What NOT to Use" → Watchtower entry, "Reference Architecture vs FB_APU04")
     - next.config.ts (modified in Task 1 to add `output: 'standalone'`)
   </read_first>
@@ -338,7 +338,7 @@ engines (package.json):
 </success_criteria>
 
 <output>
-Create `.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-01-SUMMARY.md` when done. Summary must list:
+Create `.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-01-SUMMARY.md` when done. Summary must list:
 - Exact pinned versions in `package.json`
 - Files created (paths)
 - Anti-pitfalls defused (#1 embedded-DB in .gitignore + .gitleaks.toml, #6 committed secrets, #19 Watchtower :latest)

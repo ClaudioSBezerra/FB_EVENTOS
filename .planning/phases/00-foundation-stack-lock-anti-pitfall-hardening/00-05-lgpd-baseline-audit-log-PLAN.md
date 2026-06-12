@@ -94,9 +94,9 @@ Output: Two new Drizzle tables + two migrations (one to create + one to apply gr
 @CLAUDE.md
 @.planning/PROJECT.md
 @.planning/REQUIREMENTS.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-03-SUMMARY.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-03-SUMMARY.md
 
 <interfaces>
 <!-- Required Drizzle imports + helper signatures. -->
@@ -127,7 +127,7 @@ src/lib/soft-delete.ts exports:
   <name>Task 1: audit_log + consent_records schema, migrations, append-only grants, PII comments</name>
   <files>src/db/schema/audit.ts, src/db/schema/consent.ts, src/db/schema/index.ts, src/db/migrations/0004_lgpd_baseline.sql, src/db/migrations/0005_pii_comments_and_audit_grants.sql</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 9: LGPD Baseline Schema")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 9: LGPD Baseline Schema")
     - src/db/schema/auth.ts (Plan 03 Task 1 — already includes `deletedAt` on user)
     - src/db/migrations/0000_roles_and_extensions.sql (Plan 03 Task 2 — fb_eventos_app role grants)
   </read_first>
@@ -294,7 +294,7 @@ src/lib/soft-delete.ts exports:
   <name>Task 3: Consent banner (LGPD-02) + docs/LGPD.md placeholder (LGPD-06)</name>
   <files>src/components/consent-banner.tsx, src/app/layout.tsx, docs/LGPD.md</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 9" mention of LGPD-02 client placeholder)
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 9" mention of LGPD-02 client placeholder)
     - src/app/layout.tsx (existing root layout from Plan 01)
   </read_first>
   <behavior>
@@ -404,7 +404,7 @@ src/lib/soft-delete.ts exports:
 </success_criteria>
 
 <output>
-Create `.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-05-SUMMARY.md` listing:
+Create `.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-05-SUMMARY.md` listing:
 - Migration files added (0004, 0005)
 - Tables added (audit_log, consent_records) with their RLS state
 - Helper modules added (audit.ts, soft-delete.ts) with their signatures

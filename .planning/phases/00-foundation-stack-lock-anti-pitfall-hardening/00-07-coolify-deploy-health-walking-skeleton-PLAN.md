@@ -104,10 +104,10 @@ Output: health route + worker Dockerfile + `tsconfig.worker.json` + docs/deploy/
 @CLAUDE.md
 @.planning/PROJECT.md
 @.planning/REQUIREMENTS.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-04-SUMMARY.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-06-SUMMARY.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-04-SUMMARY.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-06-SUMMARY.md
 
 <interfaces>
 <!-- Required for Playwright + health endpoint. -->
@@ -147,7 +147,7 @@ tsconfig.worker.json shape:
   <name>Task 1: /api/health route + worker Dockerfile + tsconfig.worker.json + Playwright E2E walking skeleton</name>
   <files>src/app/api/health/route.ts, docker/Dockerfile.worker, tsconfig.worker.json, playwright.config.ts, tests/e2e/walking-skeleton.spec.ts, tests/e2e/fixtures/two-tenants.ts, .github/workflows/ci.yml, package.json</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Health Check Endpoint", "Pattern 11: Multi-Stage Dockerfile")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Health Check Endpoint", "Pattern 11: Multi-Stage Dockerfile")
     - docker/Dockerfile (Plan 01 Task 3 — the web image)
     - src/db/index.ts (Plan 03)
     - tests/auth/tenant-isolation-e2e.test.ts (Plan 04 — the LOAD-BEARING TENA-07 proof; this plan does not duplicate it)
@@ -347,7 +347,7 @@ tsconfig.worker.json shape:
   <files>docker/coolify/web.service.md, docker/coolify/worker.service.md, docker/coolify/postgres.service.md, docker/coolify/traefik-labels.md, docs/deploy/COOLIFY.md, docs/RUNBOOK.md, docs/deploy/BACKUP.md, README.md</files>
   <read_first>
     - CLAUDE.md (sections "Reference Architecture vs FB_APU04", "What NOT to Use" → Watchtower entry)
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Open Questions" #2 #3, "Environment Availability")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Open Questions" #2 #3, "Environment Availability")
     - docker/Dockerfile (Plan 01 + 03)
     - docker/Dockerfile.worker (Task 1 above)
     - .github/workflows/build-and-push.yml (Plan 02 Task 3)
@@ -529,7 +529,7 @@ tsconfig.worker.json shape:
 </success_criteria>
 
 <output>
-Create `.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-07-SUMMARY.md` listing:
+Create `.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-07-SUMMARY.md` listing:
 - Production URL (placeholder until Task 3 checkpoint completes)
 - Image tags pushed (web 0.1.0, worker 0.1.0)
 - Task 3 verification result with checkpoint resume signal pasted verbatim

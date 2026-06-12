@@ -168,9 +168,9 @@ Output: Better Auth server + client + Next.js handler; `src/middleware.ts`; safe
 @CLAUDE.md
 @.planning/PROJECT.md
 @.planning/REQUIREMENTS.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-03-SUMMARY.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-03-SUMMARY.md
 
 <interfaces>
 <!-- Required imports the executor MUST use. Pin EXACTLY. -->
@@ -229,7 +229,7 @@ SYSTEM_PREFIXES = new Set(['api', '_next', 'login', 'signup', 'verify-email',
   <name>Task 1a: Install packages + shadcn-ui primitives + env validation + Better Auth server/client + Next.js handler</name>
   <files>package.json, components.json, src/auth/server.ts, src/auth/client.ts, src/app/api/auth/[...all]/route.ts, src/lib/env.ts, src/components/ui/button.tsx, src/components/ui/input.tsx, src/components/ui/label.tsx, src/components/ui/form.tsx, src/components/ui/card.tsx, src/components/ui/checkbox.tsx</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 5: Better Auth Setup", "Pitfall 6: Better Auth additionalFields")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 5: Better Auth Setup", "Pitfall 6: Better Auth additionalFields")
     - src/db/schema/auth.ts (Plan 03 Task 1)
     - .env.example (Plan 01)
   </read_first>
@@ -308,7 +308,7 @@ SYSTEM_PREFIXES = new Set(['api', '_next', 'login', 'signup', 'verify-email',
   <name>Task 1b: Middleware + tenant lib + email lib + safe-action chain + consent Server Action + migration 0003 + middleware test</name>
   <files>src/middleware.ts, src/lib/tenant.ts, src/lib/email.ts, src/lib/actions/safe-action.ts, src/lib/actions/consent.ts, src/db/schema/auth.ts, src/db/migrations/0003_better_auth_extras.sql, tests/middleware/tenant-slug-resolution.test.ts</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 4: middleware.ts", "next-safe-action v8 Client Setup", "Pitfall 7: Reserved Slug Collision")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 4: middleware.ts", "next-safe-action v8 Client Setup", "Pitfall 7: Reserved Slug Collision")
     - src/auth/server.ts (Task 1a)
     - src/db/schema/auth.ts (Plan 03 Task 1)
     - src/db/with-tenant.ts (Plan 03 Task 3)
@@ -464,7 +464,7 @@ SYSTEM_PREFIXES = new Set(['api', '_next', 'login', 'signup', 'verify-email',
     - src/lib/actions/consent.ts (Task 1b)
     - src/components/ui/* (Task 1a — shadcn)
     - src/db/with-tenant.ts (Plan 03)
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 5")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 5")
   </read_first>
   <behavior>
     - `/signup` renders a form: email, password (min 12 chars), name, organization name, organization slug (validated against SYSTEM_PREFIXES client-side AND server-side), LGPD consent checkbox (REQUIRED) referencing `docs/LGPD.md`. Submission calls `authClient.signUp.email({...})` with `consentVersion='2026-06-01'`, `consentAt=new Date().toISOString()` — `consentIp` is NOT passed from the client. After Better Auth's signUp returns success, the form's `onSuccess` callback invokes `recordConsentMetadata({ consentVersion: '2026-06-01', consentText: <wording snapshot> })` (Task 1b) — the Server Action extracts the IP from `headers()` and inserts the audit-grade row into `consent_records`. If slug is reserved → form-level error. If consent unchecked → form prevented from submitting + backend rejects (Better Auth additionalFields `consentVersion` is `required:true`, so empty consent metadata fails at the Better Auth layer too).
@@ -537,7 +537,7 @@ SYSTEM_PREFIXES = new Set(['api', '_next', 'login', 'signup', 'verify-email',
   <name>Task 3: Integration tests — signup/verify/login/reset/2FA happy paths + TENA-07 cross-tenant E2E isolation + Server Component isolation failure-mode test</name>
   <files>tests/auth/signup.test.ts, tests/auth/session-persist.test.ts, tests/auth/password-reset.test.ts, tests/auth/two-factor.test.ts, tests/auth/tenant-isolation-e2e.test.ts, tests/auth/server-component-tenant-isolation.test.ts, src/test/auth-helpers.ts</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md (section "Phase Requirements → Test Map")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md (section "Phase Requirements → Test Map")
     - src/auth/server.ts (Task 1a)
     - src/lib/actions/safe-action.ts (Task 1b)
     - src/lib/actions/consent.ts (Task 1b)
@@ -680,7 +680,7 @@ SYSTEM_PREFIXES = new Set(['api', '_next', 'login', 'signup', 'verify-email',
 </success_criteria>
 
 <output>
-Create `.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-04-SUMMARY.md` listing:
+Create `.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-04-SUMMARY.md` listing:
 - Pinned versions of better-auth, next-safe-action, @hookform/resolvers, zod, react-hook-form
 - Auth pages and their consumed Better Auth endpoints
 - Middleware behavior summary + SYSTEM_PREFIXES list + the TENA-05 split (header only, no DB)

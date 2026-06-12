@@ -86,8 +86,8 @@ Output: GitHub Actions workflows + reusable shell gate scripts + Dependabot conf
 @CLAUDE.md
 @.planning/PROJECT.md
 @.planning/research/PITFALLS.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
 
 <interfaces>
 <!-- Required GitHub Actions / Action versions (verified in RESEARCH.md). -->
@@ -125,7 +125,7 @@ drizzle_push_regex:         'drizzle-kit\s+push'
   <files>scripts/ci/check-no-embedded-db.sh, scripts/ci/check-no-legacy-names.sh, scripts/ci/check-no-drizzle-push.sh, scripts/ci/check-nextjs-version.sh, package.json</files>
   <read_first>
     - .planning/research/PITFALLS.md (pitfalls #1, #16, #17, #19)
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 12: CI Pipeline YAML" — copy the grep/find patterns)
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 12: CI Pipeline YAML" — copy the grep/find patterns)
     - CLAUDE.md (section "What NOT to Use")
   </read_first>
   <action>
@@ -174,7 +174,7 @@ drizzle_push_regex:         'drizzle-kit\s+push'
   <name>Task 2: CI workflow with gates + lint/typecheck/test/build (PR-blocking)</name>
   <files>.github/workflows/ci.yml, .github/dependabot.yml, .github/CODEOWNERS, .github/pull_request_template.md, .github/CONTRIBUTING.md</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 12: CI Pipeline YAML")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (section "Pattern 12: CI Pipeline YAML")
     - scripts/ci/*.sh (just created in Task 1)
     - package.json (after Plan 01 + Task 1 — has check:* scripts)
     - CLAUDE.md (section "What NOT to Use" — Watchtower/`:latest` ban)
@@ -243,7 +243,7 @@ drizzle_push_regex:         'drizzle-kit\s+push'
   <name>Task 3: Tag-triggered build-and-push workflow (semver-only Docker push to GHCR)</name>
   <files>.github/workflows/build-and-push.yml, .github/workflows/ci.yml</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (Pattern 11 Dockerfile)
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (Pattern 11 Dockerfile)
     - docker/Dockerfile (created in Plan 01 Task 3)
     - CLAUDE.md ("What NOT to Use" → Watchtower/`:latest`)
   </read_first>
@@ -341,7 +341,7 @@ drizzle_push_regex:         'drizzle-kit\s+push'
 </success_criteria>
 
 <output>
-Create `.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-02-SUMMARY.md` listing:
+Create `.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-02-SUMMARY.md` listing:
 - All five CI job names + their dependencies
 - Path to each anti-pitfall shell gate
 - Tag-trigger pattern for production builds

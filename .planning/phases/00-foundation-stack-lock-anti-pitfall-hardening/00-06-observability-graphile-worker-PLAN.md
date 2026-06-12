@@ -107,10 +107,10 @@ Output: Pino logger + Next.js instrumentation hooks + Sentry configs; src/jobs/r
 
 <context>
 @CLAUDE.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-04-SUMMARY.md
-@.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-05-SUMMARY.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-VALIDATION.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-04-SUMMARY.md
+@.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-05-SUMMARY.md
 
 <interfaces>
 <!-- Required imports + signatures. Pinned versions per RESEARCH Standard Stack. -->
@@ -151,7 +151,7 @@ src/middleware.ts (modified):
   <name>Task 1: Pino logger + Next.js instrumentation + Sentry configs + request-id binding</name>
   <files>package.json, src/lib/logger.ts, src/instrumentation.ts, src/instrumentation-node.ts, sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts, next.config.ts, src/middleware.ts, tests/logging/request-id-binding.test.ts</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 8: Pino Logger + Request ID", "Pattern 10: Sentry Configuration", "Pitfall 5: Sentry Wizard Generates Next.js 16 File Names")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 8: Pino Logger + Request ID", "Pattern 10: Sentry Configuration", "Pitfall 5: Sentry Wizard Generates Next.js 16 File Names")
     - src/middleware.ts (Plan 04 Task 1 — sets x-request-id)
     - next.config.ts (Plan 01 + 03)
   </read_first>
@@ -245,7 +245,7 @@ src/middleware.ts (modified):
   <name>Task 2: [BLOCKING] Verify Graphile-Worker add_job() SQL signature on running Postgres</name>
   <files>tests/jobs/add-job-signature-probe.test.ts, src/db/migrations/0006_graphile_worker_install.sql</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 6: Graphile-Worker Setup", "Assumptions Log" A1, "Open Questions" #1)
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 6: Graphile-Worker Setup", "Assumptions Log" A1, "Open Questions" #1)
     - https://worker.graphile.org/docs (visit live; RESEARCH could not pin the SQL signature)
   </read_first>
   <what-built>
@@ -296,7 +296,7 @@ src/middleware.ts (modified):
   <name>Task 3: Graphile-Worker runner + task harness + enqueueJob() helper + ADR-0001</name>
   <files>package.json, src/jobs/runner.ts, src/jobs/tasks/echo.ts, src/jobs/tasks/index.ts, src/jobs/enqueue.ts, scripts/jobs/start-worker.ts, docs/adr/0001-queue-backend.md, tests/jobs/enqueue.test.ts, tests/jobs/worker-without-with-tenant.test.ts</files>
   <read_first>
-    - .planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 6: Graphile-Worker Setup", "ADR-001 Recommendation")
+    - .planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-RESEARCH.md (sections "Pattern 6: Graphile-Worker Setup", "ADR-001 Recommendation")
     - Task 2 checkpoint result (verified add_job signature)
     - src/db/with-tenant.ts (Plan 03 — Pitfall 8 reminder)
   </read_first>
@@ -507,7 +507,7 @@ src/middleware.ts (modified):
 </success_criteria>
 
 <output>
-Create `.planning/phases/FB_EVENTOS-00-foundation-stack-lock-anti-pitfall-hardening/00-06-SUMMARY.md` listing:
+Create `.planning/phases/00-foundation-stack-lock-anti-pitfall-hardening/00-06-SUMMARY.md` listing:
 - Pinned versions of pino, @sentry/nextjs, graphile-worker
 - Logger API summary (logger + childLogger)
 - Sentry config file names + verified absence of instrumentation-client.ts

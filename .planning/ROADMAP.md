@@ -31,7 +31,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Integration test com dois tenants (`tenant_A`, `tenant_B`) prova que usuário autenticado de A nunca vê dados de B em nenhum endpoint — RLS está `FORCED`, role `fb_eventos_app` não tem `BYPASSRLS`, middleware `SET LOCAL app.current_tenant_id` é obrigatório
   4. Usuário pode criar conta com email+senha (Better Auth), verificar email, fazer login que persiste entre refreshes, e resetar senha via link — fluxo end-to-end testado
   5. ADR registrada decidindo Graphile-Worker vs pg-boss; versões de Next 15.x, Drizzle 0.45.x, Better Auth 1.6.x, Node 22 LTS travadas em `package.json` lock; extensões Postgres `pgcrypto` e `pg_trgm` confirmadas disponíveis no Coolify
-**Plans**: TBD
+**Plans**: 7 plans
+- [ ] 00-01-PLAN.md — Repo bootstrap & tooling floor (pnpm + Next.js 15.5.19 + TypeScript + Biome + Husky + gitleaks binary + .env manifests + multi-stage Dockerfile)
+- [ ] 00-02-PLAN.md — CI anti-pitfall gates (GitHub Actions: embedded-DB grep, gitleaks-action@v2, drizzle-push ban, legacy fb_apu0x ban, Next 16 ban, tag-only build-and-push)
+- [ ] 00-03-PLAN.md — Postgres + Drizzle + RLS foundation (docker compose without Redis, two-role pattern, RLS FORCED, withTenant wrapper, three RLS contract tests)
+- [ ] 00-04-PLAN.md — Better Auth + multi-tenant middleware + auth UI (signup with LGPD consent, login, verify, reset, 2FA, /[slug]/dashboard, TENA-07 dual-tenant E2E)
+- [ ] 00-05-PLAN.md — LGPD baseline + audit log (audit_log append-only, consent_records versioning, PII COMMENT ON COLUMN, soft-delete helpers, consent banner, docs/LGPD.md)
+- [ ] 00-06-PLAN.md — Observability + Graphile-Worker job harness (Pino + Sentry + child-logger bindings; Graphile-Worker runner/enqueue; ADR-0001; add_job signature probe)
+- [ ] 00-07-PLAN.md — Coolify deploy + health + walking-skeleton E2E (api/health, Dockerfile.worker, Coolify manifests, Traefik labels, RUNBOOK + BACKUP, Playwright E2E)
 
 ### Phase 1: Organizadora End-to-End (Piloto Festa de Trindade)
 **Goal**: Organizadora cadastra evento real (Festa de Trindade/GO), sobe planta, desenha lotes 2D clicáveis, cadastra/aprova fornecedores manualmente, emite contrato digital, cobra via link e vê dashboards de ocupação + financeiro — sem retornar para Excel/WhatsApp
