@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist-worker",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": false,
+    "jsx": "preserve",
+    "plugins": []
+  },
+  "include": [
+    "src/jobs/**/*",
+    "scripts/jobs/**/*",
+    "src/lib/**/*",
+    "src/db/**/*",
+    "src/auth/server.ts"
+  ],
+  "exclude": [
+    "src/app/**/*",
+    "src/components/**/*",
+    "src/middleware.ts",
+    "src/instrumentation.ts",
+    "src/instrumentation-node.ts",
+    "node_modules",
+    "dist-worker",
+    ".next",
+    "tests/**/*",
+    "**/*.test.ts"
+  ]
+}

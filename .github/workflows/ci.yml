@@ -160,6 +160,84 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
 
   # =========================================================================
+  # Job 4b — e2e (Playwright walking skeleton — Plan 07)
+  # Boots Next.js dev server against a real Postgres sidecar, installs
+  # Chromium, runs the walking-skeleton spec end-to-end. This is the
+  # proof-of-integration job for Phase 0: signup -> verify -> login ->
+  # tenant-scoped dashboard round-trip + LGPD consent enforcement.
+  #
+  # Also compiles the worker bundle (tsconfig.worker.json) as a smoke test
+  # for Plan 07's docker/Dockerfile.worker build step.
+  # =========================================================================
+  e2e:
+    name: E2E (Playwright walking skeleton)
+    runs-on: ubuntu-latest
+    needs: [lint-typecheck, test]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fb_test
+          POSTGRES_PASSWORD: fb_test
+          POSTGRES_DB: fb_eventos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers (chromium + system deps)
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Bootstrap roles + apply migrations
+        run: |
+          set -euo pipefail
+          PG_BOOTSTRAP_URL='postgresql://fb_test:fb_test@localhost:5432/postgres' \
+            bash scripts/db/setup-roles.sh
+          DATABASE_MIGRATOR_URL='postgresql://fb_migrator:fb_migrator_dev_pw@localhost:5432/fb_eventos_dev' \
+            pnpm exec tsx src/db/migrate.ts
+
+      - name: Compile worker bundle (smoke-test tsconfig.worker.json)
+        run: pnpm build:worker
+
+      - name: Run Playwright walking-skeleton spec
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgresql://fb_app_user:fb_app_dev_pw@localhost:5432/fb_eventos_dev
+          DATABASE_MIGRATOR_URL: postgresql://fb_migrator:fb_migrator_dev_pw@localhost:5432/fb_eventos_dev
+          BETTER_AUTH_SECRET: test-secret-32-chars-minimum-here
+          BETTER_AUTH_URL: http://localhost:3000
+          NEXT_TELEMETRY_DISABLED: 1
+          PLAYWRIGHT_BROWSERS_READY: '1'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # =========================================================================
   # Job 5 — build (FOUND-07)
   # Smoke-tests `pnpm build` with placeholder env vars so a Next.js misconfig
   # is caught at PR time. Depends on lint+test so we don't waste a build slot

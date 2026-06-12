@@ -30,9 +30,13 @@
     "test": "vitest run",
     "test:unit": "vitest run --reporter=verbose",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "worker:dev": "tsx --env-file=.env.local scripts/jobs/start-worker.ts",
-    "worker:start": "node dist/worker.js",
-    "docker:build:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-web:$(node -p \"require('./package.json').version\") -f docker/Dockerfile ."
+    "worker:start": "node dist-worker/scripts/jobs/start-worker.js",
+    "build:worker": "tsc -p tsconfig.worker.json",
+    "docker:build:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-web:$(node -p \"require('./package.json').version\") -f docker/Dockerfile .",
+    "docker:build:worker:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-worker:$(node -p \"require('./package.json').version\") -f docker/Dockerfile.worker ."
   },
   "dependencies": {
     "@hookform/resolvers": "~5.4.0",
@@ -59,6 +63,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "~2.4.16",
+    "@playwright/test": "~1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22",
     "@types/nodemailer": "^8.0.1",

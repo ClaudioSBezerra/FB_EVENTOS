@@ -1,0 +1,88 @@
+# syntax=docker/dockerfile:1.7
+#
+# FB_EVENTOS Graphile-Worker Dockerfile (Phase 0, Plan 07 — Task 1).
+#
+# The Graphile-Worker process runs as a SEPARATE Coolify service from the
+# Next.js web image (docker/Dockerfile). Decoupling worker uptime from web
+# uptime + isolating pg pools is established by Plan 06 ADR-0001.
+#
+# Builds the worker as a plain Node CJS bundle from `tsconfig.worker.json`:
+# only `src/jobs/**`, `scripts/jobs/**`, `src/lib/**`, `src/db/**`, and the
+# auth server module are compiled. React / Next.js / Edge code is excluded
+# so the worker image stays lean.
+#
+# CMD launches the entrypoint at dist-worker/scripts/jobs/start-worker.js,
+# which awaits the graphile-worker run() promise and exits cleanly on
+# SIGTERM (Coolify drains in-flight jobs before replacing the pod).
+#
+# Build command:
+#   docker build \
+#     --build-arg APP_VERSION=$(node -p "require('./package.json').version") \
+#     -t ghcr.io/<org>/fb-eventos-worker:$(node -p "require('./package.json').version") \
+#     -f docker/Dockerfile.worker .
+#
+# T-0-07 — NO floating tag. Always semver. Coolify pulls the explicit tag
+# (NO Watchtower). See CLAUDE.md "What NOT to Use" and the
+# verify-no-floating-tag CI gate.
+
+# ─── Stage 1: deps ──────────────────────────────────────────────────────────
+FROM node:22-alpine AS deps
+WORKDIR /app
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# ─── Stage 2: builder ───────────────────────────────────────────────────────
+FROM node:22-alpine AS builder
+WORKDIR /app
+
+RUN corepack enable
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NODE_ENV=production
+
+# Compile only the worker surface — tsconfig.worker.json excludes src/app/**
+# so React / Next.js / Edge types don't leak into the worker bundle. Output
+# lands in dist-worker/ which the runner stage copies.
+RUN pnpm tsc -p tsconfig.worker.json
+
+# ─── Stage 3: runner ────────────────────────────────────────────────────────
+FROM node:22-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV TZ=America/Sao_Paulo
+
+# Drop privileges. The worker process needs neither root nor any network
+# bind — only outbound Postgres + Resend + MinIO.
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 worker
+
+# Production node_modules (no dev deps required by the worker runtime).
+COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=worker:nodejs /app/dist-worker ./dist-worker
+# Ship the migrations directory so graphile-worker can install its schema
+# on first boot (deploy-time migration step covers our own migrations).
+COPY --from=builder --chown=worker:nodejs /app/src/db/migrations ./src/db/migrations
+COPY --from=builder --chown=worker:nodejs /app/package.json ./package.json
+
+USER worker
+
+# No port exposure — the worker has no HTTP surface. Coolify polls
+# `restart: always` + process liveness. No HEALTHCHECK directive.
+
+# Image must be tagged with a semver at build time (see header).
+# NEVER use a floating tag (T-0-07; CLAUDE.md "What NOT to Use").
+ARG APP_VERSION=0.0.0-unset
+ENV APP_VERSION=${APP_VERSION}
+LABEL org.opencontainers.image.title="fb-eventos-worker"
+LABEL org.opencontainers.image.version="${APP_VERSION}"
+LABEL org.opencontainers.image.source="https://github.com/fb-eventos/fb-eventos"
+LABEL org.opencontainers.image.licenses="Proprietary"
+
+# Entrypoint compiled from scripts/jobs/start-worker.ts (Plan 06).
+CMD ["node", "dist-worker/scripts/jobs/start-worker.js"]

@@ -43,7 +43,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push image
+      - name: Build & push web image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -54,8 +54,23 @@ jobs:
           # the only acceptable forms. The verify-no-latest-in-workflows
           # job in ci.yml plus the guard step below catch any drift.
           tags: |
-            ghcr.io/${{ github.repository }}:${{ env.APP_VERSION }}
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}-web:${{ env.APP_VERSION }}
+            ghcr.io/${{ github.repository }}-web:${{ github.sha }}
+          build-args: |
+            APP_VERSION=${{ env.APP_VERSION }}
+
+      - name: Build & push worker image
+        # Plan 07: worker runs as a SEPARATE Coolify service from the web
+        # process. Same semver — they ship together — different image tag
+        # so Coolify's service config can pin them independently.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.worker
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-worker:${{ env.APP_VERSION }}
+            ghcr.io/${{ github.repository }}-worker:${{ github.sha }}
           build-args: |
             APP_VERSION=${{ env.APP_VERSION }}
 
