@@ -50,7 +50,7 @@ import { sql } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
 import { db } from './index'
-import * as schema from './schema'
+import type * as schema from './schema'
 
 /**
  * Transaction-scoped Drizzle handle as exposed by `db.transaction(cb)` for

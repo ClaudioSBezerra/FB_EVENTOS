@@ -1,70 +1,111 @@
 /**
- * Centralized environment variable lookups.
+ * Centralized environment variable lookups with Zod 4 validation (Plan 04).
  *
- * Phase 0 / Plan 01: stub that re-exports process.env values without validation.
- * Phase 0 / Plan 03: keys for DATABASE_URL + DATABASE_MIGRATOR_URL are now
- * load-bearing for src/db/index.ts. Validation remains a TODO until Plan 04
- * adds Zod (Zod 4 lands in Plan 04 to keep this plan's package surface
- * focused). When Zod arrives, swap the body of this module for a fail-fast
- * z.object({...}).parse(process.env) call — all call sites continue to read
- * `env.X` and pick up validation for free.
+ * Replaces the Plan 01 stub. Validates ALL keys on first import and throws a
+ * friendly error if any required key is missing or malformed. The
+ * BETTER_AUTH_SECRET min-32 check and BETTER_AUTH_URL valid-URL check are
+ * non-negotiable: Better Auth signs sessions with the secret and uses the
+ * URL as the canonical origin for verification links.
  *
- * Required at runtime (no fallback):
+ * Required at runtime:
  *   - DATABASE_URL                 — fb_eventos_app role (Plan 03)
+ *   - BETTER_AUTH_SECRET           — min 32 chars
+ *   - BETTER_AUTH_URL              — valid URL
+ *   - NEXT_PUBLIC_APP_URL          — valid URL
+ *
  * Required at migration time only:
  *   - DATABASE_MIGRATOR_URL        — fb_eventos_migrator role (Plan 03)
- * Required at auth time:
- *   - BETTER_AUTH_SECRET           — min 32 chars (Plan 04 will validate)
- *   - BETTER_AUTH_URL              — (Plan 04)
  *
- * @see .env.example for the full key manifest.
+ * Required in production (Resend email transport):
+ *   - RESEND_API_KEY               — in dev/test this is optional;
+ *                                    email-lib falls back to nodemailer + mailpit
+ *
+ * Required at build/runtime with sensible defaults:
+ *   - LOG_LEVEL                    — pino enum, default 'info'
+ *   - NODE_ENV                     — node enum, default 'development'
+ *   - TZ                           — default 'America/Sao_Paulo'
+ *
+ * @see .env.example for the full manifest.
  */
 
-function read(key: string): string | undefined {
-  return process.env[key]
-}
+import { z } from 'zod'
 
-function readRequired(key: string): string {
-  const value = process.env[key]
-  if (value === undefined || value === '') {
-    throw new Error(
-      `Missing required environment variable: ${key}. ` + `See .env.example for the manifest.`,
-    )
-  }
-  return value
-}
+const isMigrationTime =
+  process.argv.some((a) => a.includes('migrate')) ||
+  process.argv.some((a) => a.includes('drizzle-kit')) ||
+  process.env.MIGRATION_RUNTIME === '1'
 
-export const env = {
-  // Database (Plan 03)
-  DATABASE_URL: read('DATABASE_URL'),
-  DATABASE_MIGRATOR_URL: read('DATABASE_MIGRATOR_URL'),
+const isProduction = process.env.NODE_ENV === 'production'
+
+const envSchema = z.object({
+  // Database
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required (fb_eventos_app role, Plan 03)'),
+  DATABASE_MIGRATOR_URL: z.string().optional(),
 
   // Auth (Plan 04)
-  BETTER_AUTH_SECRET: read('BETTER_AUTH_SECRET'),
-  BETTER_AUTH_URL: read('BETTER_AUTH_URL'),
+  BETTER_AUTH_SECRET: z
+    .string()
+    .min(
+      32,
+      'BETTER_AUTH_SECRET must be at least 32 characters (generate with `openssl rand -hex 32`)',
+    ),
+  BETTER_AUTH_URL: z.url('BETTER_AUTH_URL must be a valid URL'),
 
-  // Email (Plan 04)
-  RESEND_API_KEY: read('RESEND_API_KEY'),
+  // Email (Plan 04) — required in production; dev falls back to nodemailer/mailpit
+  RESEND_API_KEY: isProduction
+    ? z.string().min(1, 'RESEND_API_KEY is required in production')
+    : z.string().optional(),
 
   // Object Storage (Phase 1)
-  MINIO_ENDPOINT: read('MINIO_ENDPOINT'),
-  MINIO_PORT: read('MINIO_PORT'),
-  MINIO_ACCESS_KEY: read('MINIO_ACCESS_KEY'),
-  MINIO_SECRET_KEY: read('MINIO_SECRET_KEY'),
-  MINIO_USE_SSL: read('MINIO_USE_SSL'),
-  MINIO_DEFAULT_BUCKET: read('MINIO_DEFAULT_BUCKET'),
+  MINIO_ENDPOINT: z.string().optional(),
+  MINIO_PORT: z.string().optional(),
+  MINIO_ACCESS_KEY: z.string().optional(),
+  MINIO_SECRET_KEY: z.string().optional(),
+  MINIO_USE_SSL: z.string().optional(),
+  MINIO_DEFAULT_BUCKET: z.string().optional(),
 
   // Observability (Plan 06)
-  SENTRY_DSN: read('SENTRY_DSN'),
-  SENTRY_AUTH_TOKEN: read('SENTRY_AUTH_TOKEN'),
-  LOG_LEVEL: read('LOG_LEVEL') ?? 'info',
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_AUTH_TOKEN: z.string().optional(),
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
 
   // App
-  NEXT_PUBLIC_APP_URL: read('NEXT_PUBLIC_APP_URL'),
-  NODE_ENV: read('NODE_ENV') ?? 'development',
-  TZ: read('TZ') ?? 'America/Sao_Paulo',
-} as const
+  NEXT_PUBLIC_APP_URL: z.url('NEXT_PUBLIC_APP_URL must be a valid URL'),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  TZ: z.string().default('America/Sao_Paulo'),
+})
 
-// Re-export the strict accessor so later plans can switch a single import
-// from `env.X` to `requireEnv('X')` when a value is non-optional at boot.
-export { readRequired as requireEnv }
+export type Env = z.infer<typeof envSchema>
+
+function parseEnv(): Env {
+  const result = envSchema.safeParse(process.env)
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
+      .join('\n')
+    throw new Error(
+      `Invalid environment variables:\n${issues}\n\nSee .env.example for the full manifest.`,
+    )
+  }
+  if (isMigrationTime && !result.data.DATABASE_MIGRATOR_URL) {
+    throw new Error(
+      'DATABASE_MIGRATOR_URL is required at migration time (drizzle-kit migrate / pnpm db:migrate). ' +
+        'See .env.example.',
+    )
+  }
+  return result.data
+}
+
+export const env: Env = parseEnv()
+
+/**
+ * Strict accessor for tests / scripts that read keys at runtime. Returns the
+ * parsed value or throws. New code should import `env` directly.
+ */
+export function requireEnv<K extends keyof Env>(key: K): NonNullable<Env[K]> {
+  const value = env[key]
+  if (value === undefined || value === '') {
+    throw new Error(`Missing required environment variable: ${String(key)}`)
+  }
+  return value as NonNullable<Env[K]>
+}
