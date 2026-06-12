@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Usuário pode criar conta com email+senha (Better Auth), verificar email, fazer login que persiste entre refreshes, e resetar senha via link — fluxo end-to-end testado
   5. ADR registrada decidindo Graphile-Worker vs pg-boss; versões de Next 15.x, Drizzle 0.45.x, Better Auth 1.6.x, Node 22 LTS travadas em `package.json` lock; extensões Postgres `pgcrypto` e `pg_trgm` confirmadas disponíveis no Coolify
 **Plans**: 7 plans
-- [ ] 00-01-PLAN.md — Repo bootstrap & tooling floor (pnpm + Next.js 15.5.19 + TypeScript + Biome + Husky + gitleaks binary + .env manifests + multi-stage Dockerfile)
+- [x] 00-01-PLAN.md — Repo bootstrap & tooling floor (pnpm + Next.js 15.5.19 + TypeScript + Biome + Husky + gitleaks binary + .env manifests + multi-stage Dockerfile)
 - [ ] 00-02-PLAN.md — CI anti-pitfall gates (GitHub Actions: embedded-DB grep, gitleaks-action@v2, drizzle-push ban, legacy fb_apu0x ban, Next 16 ban, tag-only build-and-push)
 - [ ] 00-03-PLAN.md — Postgres + Drizzle + RLS foundation (docker compose without Redis, two-role pattern, RLS FORCED, withTenant wrapper, three RLS contract tests)
 - [ ] 00-04-PLAN.md — Better Auth + multi-tenant middleware + auth UI (signup with LGPD consent, login, verify, reset, 2FA, /[slug]/dashboard, TENA-07 dual-tenant E2E)
@@ -103,7 +103,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 0/TBD | Not started | - |
+| 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 1/7 | In Progress|  |
 | 1. Organizadora End-to-End (Piloto Festa de Trindade) | 0/TBD | Not started | - |
 | 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/TBD | Not started | - |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
