@@ -35,8 +35,6 @@ const isMigrationTime =
   process.argv.some((a) => a.includes('drizzle-kit')) ||
   process.env.MIGRATION_RUNTIME === '1'
 
-const isProduction = process.env.NODE_ENV === 'production'
-
 const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required (fb_eventos_app role, Plan 03)'),
@@ -51,10 +49,12 @@ const envSchema = z.object({
     ),
   BETTER_AUTH_URL: z.url('BETTER_AUTH_URL must be a valid URL'),
 
-  // Email (Plan 04) — required in production; dev falls back to nodemailer/mailpit
-  RESEND_API_KEY: isProduction
-    ? z.string().min(1, 'RESEND_API_KEY is required in production')
-    : z.string().optional(),
+  // Email (Plan 04) — optional in env validation; production deployments
+  // MUST set RESEND_API_KEY via Coolify env, and src/lib/email.ts throws at
+  // send time if it's missing in NODE_ENV=production. Keeping the schema
+  // optional avoids breaking `next build` (which runs with NODE_ENV=production
+  // but cannot see runtime secrets at compile time).
+  RESEND_API_KEY: z.string().optional(),
 
   // Object Storage (Phase 1)
   MINIO_ENDPOINT: z.string().optional(),

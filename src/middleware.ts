@@ -29,28 +29,10 @@
 
 import { type NextRequest, NextResponse } from 'next/server'
 
-// Inline SYSTEM_PREFIXES because the Edge runtime cannot import modules
-// that pull in `postgres.js` / Drizzle. The canonical list lives in
-// src/lib/tenant.ts and IS the source of truth for Server Components and
-// Server Actions. We duplicate the literal here to keep middleware on Edge.
-// CI gate (check-system-prefixes) ensures the two stay in sync.
-const SYSTEM_PREFIXES_EDGE = new Set([
-  'api',
-  '_next',
-  'login',
-  'signup',
-  'verify-email',
-  'reset-password',
-  'dashboard',
-  'health',
-  '2fa',
-  'admin',
-  'favicon.ico',
-  'robots.txt',
-  'sitemap.xml',
-  'static',
-  'public',
-])
+// Import from the pure-constants module — Edge-runtime safe (no DB imports).
+// The DB-bearing helpers (resolveTenantBySlug) live in '@/lib/tenant' which
+// pulls in Drizzle; middleware MUST NOT import that path.
+import { SYSTEM_PREFIXES } from '@/lib/tenant-prefixes'
 
 export function middleware(req: NextRequest): NextResponse {
   // 1. Request ID — preserve inbound or generate a fresh UUID.
@@ -61,7 +43,7 @@ export function middleware(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl
   const firstSegment = pathname.split('/').filter(Boolean)[0]?.toLowerCase() ?? ''
 
-  const isSystemPath = firstSegment === '' || SYSTEM_PREFIXES_EDGE.has(firstSegment)
+  const isSystemPath = firstSegment === '' || SYSTEM_PREFIXES.has(firstSegment)
   const tenantSlug = isSystemPath ? null : firstSegment
 
   // 3. Build the response with the headers forwarded to downstream code

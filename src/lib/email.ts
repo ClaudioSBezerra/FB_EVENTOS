@@ -25,6 +25,9 @@ const inMemoryEmails: EmailMessage[] = []
 const DEFAULT_FROM = 'FB_EVENTOS <no-reply@fb-eventos.local>'
 
 async function sendViaResend(msg: EmailMessage): Promise<void> {
+  if (!env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY missing — required for production email send.')
+  }
   const resend = new Resend(env.RESEND_API_KEY)
   await resend.emails.send({
     from: msg.from ?? DEFAULT_FROM,

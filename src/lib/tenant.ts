@@ -1,9 +1,16 @@
 // FB_EVENTOS — Tenant slug / reserved-path helpers (Phase 0, Plan 04).
 //
-// SYSTEM_PREFIXES is the canonical list of reserved first-path-segments that
-// MUST NOT be used as tenant slugs. Three layers consume it:
+// This module re-exports SYSTEM_PREFIXES + slugReserved from the pure
+// constants file (src/lib/tenant-prefixes.ts) AND adds DB-bearing helpers
+// (resolveTenantBySlug, fetchTenantIdForOrg) that depend on the Drizzle
+// singleton `db`. Client components MUST import the constants from
+// '@/lib/tenant-prefixes' to avoid pulling postgres.js into the client
+// bundle.
+//
+// Three layers consume the constants:
 //   1. src/middleware.ts — skips tenant resolution for these paths.
-//   2. src/components/auth/signup-form.tsx — client-side org-slug validation.
+//   2. src/components/auth/signup-form.tsx — client-side org-slug validation
+//      (uses tenant-prefixes.ts directly).
 //   3. Future organization-creation Server Action — server-side rejection.
 //
 // RESEARCH Pitfall 7: a tenant whose slug = "api" would shadow /api/* routes.
@@ -13,27 +20,9 @@ import { eq, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { tenants } from '@/db/schema/tenants'
 
-export const SYSTEM_PREFIXES = new Set([
-  'api',
-  '_next',
-  'login',
-  'signup',
-  'verify-email',
-  'reset-password',
-  'dashboard',
-  'health',
-  '2fa',
-  'admin',
-  'favicon.ico',
-  'robots.txt',
-  'sitemap.xml',
-  'static',
-  'public',
-])
+export { SYSTEM_PREFIXES, slugReserved } from './tenant-prefixes'
 
-export function slugReserved(slug: string): boolean {
-  return SYSTEM_PREFIXES.has(slug.toLowerCase())
-}
+import { slugReserved } from './tenant-prefixes'
 
 export interface ResolvedTenant {
   id: string
@@ -61,31 +50,11 @@ export async function resolveTenantBySlug(slug: string): Promise<ResolvedTenant 
 }
 
 /**
- * Look up tenant_id for an organization id. The organization-creation hook
- * (Phase 1+) inserts a tenants row first and stores its id in
- * `organization.tenant_id`. This helper reads it back so safe-action /
- * consent.ts can resolve `orgId → tenantId`.
- *
- * Uses migratorPool so the lookup is not blocked by RLS — `organization` is
- * tenant-scoped, but we need to read tenant_id BEFORE we have a tenant
- * context. The lookup must therefore go through a privileged path. Since
- * Plan 03's two-role model rejects the migrator from the policy too (FORCE
- * RLS), we instead use a raw postgres.js query as a superuser-equivalent:
- * the simplest correct shape is to query the global `tenants` table joined
- * via organization, using `withTenant(orgId-as-tenant-id)`. Phase 0 models
- * `org.id === org.tenant_id` so this lookup is a one-step query through
- * `withTenant` with the org's own id as tenantId.
- *
- * For Phase 0, we keep the model simple: the orgId IS the tenantId.
- * Returns the orgId itself (= tenantId by data-model invariant). When
- * Phase 1+ decouples them, this helper is the single source to update.
+ * Look up tenant_id for an organization id. Phase 0 invariant:
+ * organization.tenant_id === organization.id at creation. We confirm the
+ * tenants row exists via the global tenants table.
  */
 export async function fetchTenantIdForOrg(orgId: string): Promise<string | null> {
-  // Phase 0 invariant: organization.tenant_id === organization.id at creation.
-  // The lookup is therefore degenerate, but we still validate the org exists.
-  // We read organization with current_setting bypass — wait, we can't bypass
-  // RLS. So we directly query `tenants` via the orgId-as-tenant-id assumption
-  // and confirm a tenants row exists.
   const tenant = await db
     .select({ id: tenants.id })
     .from(tenants)
