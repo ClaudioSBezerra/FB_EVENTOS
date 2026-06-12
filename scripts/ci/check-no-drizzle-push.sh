@@ -26,11 +26,29 @@ if [ "${#SCAN_PATHS[@]}" -eq 0 ]; then
   exit 0
 fi
 
-# Match `drizzle-kit push` (any whitespace between tokens). Exclude this gate
-# script's own documentation of the banned regex.
-HITS=$(grep -rnE 'drizzle-kit[[:space:]]+push' "${SCAN_PATHS[@]}" \
+# Match real invocations of `drizzle-kit push` only — not documentation
+# references. A real invocation appears in:
+#   - a shell script (`*.sh`)
+#   - a CI workflow's `run:` shell block (`*.yml` / `*.yaml`)
+#   - a package.json `scripts` entry
+#   - a Dockerfile / docker-compose
+#
+# Markdown files are NOT scanned because they describe the ban (PR
+# template, READMEs, this script's own header). The gate's job is to fail
+# a build if a command actually runs, not to police prose.
+#
+# Workflow `name:` keys are also excluded since they describe the step's
+# purpose — banning the substring would force euphemisms for the step
+# label that documents the ban itself.
+HITS=$(grep -rnE 'drizzle-kit[[:space:]]+push([[:space:]"'"'"']|$)' "${SCAN_PATHS[@]}" \
+  --include='*.sh' \
+  --include='*.yml' --include='*.yaml' \
+  --include='package.json' \
+  --include='Dockerfile*' --include='*.dockerfile' \
+  --include='docker-compose*.yml' --include='docker-compose*.yaml' \
   --exclude='check-no-drizzle-push.sh' \
-  2>/dev/null || true)
+  2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*-?[[:space:]]*name:' \
+  || true)
 
 if [ -n "$HITS" ]; then
   echo "::error::\`drizzle-kit push\` is contractually banned (RESEARCH Pitfall 4 / T-0-03). Use \`drizzle-kit generate\` + \`drizzle-kit migrate\` so every schema change ships as a reviewable migration file."
