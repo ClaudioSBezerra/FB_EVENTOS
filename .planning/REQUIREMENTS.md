@@ -45,11 +45,11 @@ Requisitos da release inicial. Cada um mapeado para uma fase no roadmap. Organiz
 ### Compliance Baseline (LGPD)
 
 - [ ] **LGPD-01**: Tabela `consent_records` com versionamento (consent_version + texto + timestamp + user_id)
-- [ ] **LGPD-02**: Banner de consent para cookies (essenciais sempre; analytics/marketing opt-in)
-- [ ] **LGPD-03**: Tags PII nas colunas que armazenam dados pessoais (`comment` SQL) para inventário
-- [ ] **LGPD-04**: Audit log Postgres com user_id, tenant_id, action, entity, timestamp para todas as operações sensíveis
-- [ ] **LGPD-05**: Soft-delete em entidades com PII (campo `deleted_at`); hard-delete via job assíncrono
-- [ ] **LGPD-06**: Política de retenção documentada em `docs/LGPD.md` (placeholder até consulta jurídica)
+- [x] **LGPD-02**: Banner de consent para cookies (essenciais sempre; analytics/marketing opt-in)
+- [x] **LGPD-03**: Tags PII nas colunas que armazenam dados pessoais (`comment` SQL) para inventário
+- [x] **LGPD-04**: Audit log Postgres com user_id, tenant_id, action, entity, timestamp para todas as operações sensíveis
+- [x] **LGPD-05**: Soft-delete em entidades com PII (campo `deleted_at`); hard-delete via job assíncrono
+- [x] **LGPD-06**: Política de retenção documentada em `docs/LGPD.md` (placeholder até consulta jurídica)
 
 ### Phase 1 — Persona Organizadora (Cliente piloto: Festa de Trindade/GO)
 
@@ -234,11 +234,11 @@ Mapeamento de cada requisito v1 para sua fase do roadmap (cada REQ-ID aparece em
 | TENA-07 | Phase 0 | Pending |
 | TENA-08 | Phase 0 | Pending |
 | LGPD-01 | Phase 0 | Pending |
-| LGPD-02 | Phase 0 | Pending |
-| LGPD-03 | Phase 0 | Pending |
-| LGPD-04 | Phase 0 | Pending |
-| LGPD-05 | Phase 0 | Pending |
-| LGPD-06 | Phase 0 | Pending |
+| LGPD-02 | Phase 0 | Complete |
+| LGPD-03 | Phase 0 | Complete |
+| LGPD-04 | Phase 0 | Complete |
+| LGPD-05 | Phase 0 | Complete |
+| LGPD-06 | Phase 0 | Complete |
 | ORG-01 | Phase 1 | Pending |
 | ORG-02 | Phase 1 | Pending |
 | ORG-03 | Phase 1 | Pending |

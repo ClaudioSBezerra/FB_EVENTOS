@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 00-03-postgres-drizzle-rls-foundation-PLAN.md; ready for 00-04
-last_updated: "2026-06-12T11:55:16.349Z"
+stopped_at: Completed 00-05-lgpd-baseline-audit-log-PLAN.md; ready for 00-06
+last_updated: "2026-06-12T13:51:54.667Z"
 last_activity: 2026-06-12
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 00 (Foundation, Stack Lock & Anti-Pitfall Hardening) — EXECUTING
-Plan: 3 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-06-12
 
-Progress: [████░░░░░░] 43%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [████░░░░░░] 43%
 *Updated after each plan completion*
 | Phase 00 P02 | 60min | 3 tasks | 9 files |
 | Phase 00 P03 | 75min | 3 tasks | 24 files |
+| Phase 00 P05 | 45min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 00]: Plan 02 established 'gate self-trip immunity' pattern after three Rule 1 fixes (drizzle-push, legacy-names, floating-tag) — gates must use --include filters and structural anchors so their own documentation cannot trip them
 - [Phase 00]: Plan 03: RLS contract enforced at catalog layer — two-role model (fb_eventos_app NOBYPASSRLS + fb_eventos_migrator), FORCE RLS on session/organization/member/invitation, withTenant() with SET LOCAL semantics, 10/10 contract tests GREEN — T-0-01 mitigated at the deepest layer; multi-tenant promise enforced by Postgres catalog and asserted on every CI run
 - [Phase 00]: Plan 03 established '.enableRLS()' pattern (drizzle 0.45.2 API; .withRLS rename pending future bump) and 'fixtures via appPool + SET LOCAL' pattern (production-realistic test writes — RLS misconfig surfaces in test setup, not in prod)
+- [Phase ?]: [Phase 00]: Plan 05: LGPD baseline schema landed — audit_log append-only via REVOKE UPDATE/DELETE + FORCE RLS; consent_records extended with versioned consent_text snapshot + nullable tenant_id for pre-signup; 12 PII columns inventoried via COMMENT ON COLUMN 'PII:'; soft-delete helpers + consent banner + docs/LGPD.md placeholder; 4 LGPD integration tests (10 cases) prove the contract including the load-bearing singleton-db-misuse rejection (pg 22P02)
+- [Phase ?]: [Phase 00]: Plan 05 established 'PII: COMMENT ON COLUMN' inventory pattern + 'recordAudit(db, opts) singleton-db rejected loudly' pattern — every PII column in Phase 1+ MUST carry a 'PII:' prefixed comment; recordAudit signature stays explicit (no AsyncLocalStorage in Phase 0) so the call site documents which transaction it lands in
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-12T11:55:16.319Z
-Stopped at: Completed 00-03-postgres-drizzle-rls-foundation-PLAN.md; ready for 00-04
+Last session: 2026-06-12T13:51:54.641Z
+Stopped at: Completed 00-05-lgpd-baseline-audit-log-PLAN.md; ready for 00-06
 Resume file: None
