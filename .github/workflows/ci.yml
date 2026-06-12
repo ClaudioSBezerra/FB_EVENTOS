@@ -136,11 +136,25 @@ jobs:
       - name: Install deps (frozen)
         run: pnpm install --frozen-lockfile
 
-      - name: Vitest run (--passWithNoTests until Plan 03)
-        run: pnpm exec vitest run --passWithNoTests
+      # Plan 03 adds RLS contract tests in tests/db/. They require a two-role
+      # Postgres (fb_eventos_app NOBYPASSRLS + fb_eventos_migrator with DDL)
+      # and the migrations applied. The sidecar Postgres above gives us a
+      # fresh DB; bootstrap roles, apply migrations, then run vitest.
+      - name: Bootstrap roles + apply migrations
+        run: |
+          set -euo pipefail
+          # Bootstrap script reads PG_BOOTSTRAP_URL for the superuser conn.
+          PG_BOOTSTRAP_URL='postgresql://fb_test:fb_test@localhost:5432/postgres' \
+            bash scripts/db/setup-roles.sh
+          # Migrate uses DATABASE_MIGRATOR_URL.
+          DATABASE_MIGRATOR_URL='postgresql://fb_migrator:fb_migrator_dev_pw@localhost:5432/fb_eventos_dev' \
+            pnpm exec tsx src/db/migrate.ts
+
+      - name: Vitest run (RLS contract tests)
+        run: pnpm test
         env:
-          DATABASE_URL: postgresql://fb_test:fb_test@localhost:5432/fb_eventos_test
-          DATABASE_MIGRATOR_URL: postgresql://fb_test:fb_test@localhost:5432/fb_eventos_test
+          DATABASE_URL: postgresql://fb_app_user:fb_app_dev_pw@localhost:5432/fb_eventos_dev
+          DATABASE_MIGRATOR_URL: postgresql://fb_migrator:fb_migrator_dev_pw@localhost:5432/fb_eventos_dev
           BETTER_AUTH_SECRET: test-secret-32-chars-minimum-here
           BETTER_AUTH_URL: http://localhost:3000
           NEXT_TELEMETRY_DISABLED: 1
