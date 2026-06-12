@@ -1,0 +1,55 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+coverage/
+
+# next.js
+/.next/
+.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (real secrets — placeholders in .env.example & .env.production.example are committed)
+.env
+.env.local
+.env.*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# embedded-database ban (FOUND-02 / FOUND-03 — see PROJECT.md & CLAUDE.md):
+# PostgreSQL is the single source of truth. SQLite/embedded files are PROHIBITED
+# by contract. The CI gate in Plan 02 enforces this server-side; these entries
+# make the local arm of the ban explicit so a stray *.db never accidentally lands.
+*.db
+*.sqlite
+*.sqlite3
+tracker-*.db
