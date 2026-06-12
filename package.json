@@ -15,7 +15,8 @@
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
     "format": "biome format --write src/",
-    "prepare": "husky"
+    "prepare": "husky",
+    "docker:build:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-web:$(node -p \"require('./package.json').version\") -f docker/Dockerfile ."
   },
   "dependencies": {
     "next": "~15.5.19",
