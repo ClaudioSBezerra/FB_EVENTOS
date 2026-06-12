@@ -80,9 +80,12 @@ export function SignupForm() {
   async function onSubmit(values: SignupFormValues) {
     setSubmitError(null)
 
-    const consentAt = new Date().toISOString()
+    const consentAt = new Date()
 
     // 1. Better Auth signUp.email — additionalFields enforce consent required.
+    //    The auth client (inferAdditionalFields) types consentAt as Date
+    //    because of the type:'date' additionalFields config — Better Auth
+    //    handles the JSON-over-the-wire serialization.
     const { error } = await signUp.email({
       email: values.email,
       password: values.password,

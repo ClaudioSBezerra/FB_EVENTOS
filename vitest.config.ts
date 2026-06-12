@@ -16,6 +16,12 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    env: {
+      // Force NODE_ENV=test BEFORE any user module is imported. This is
+      // load-bearing for src/lib/email.ts which checks env.NODE_ENV at
+      // parse time to choose the in-memory capture transport.
+      NODE_ENV: 'test',
+    },
     testTimeout: 30000,
     // Serialize DB tests on a single worker. Different test files run
     // sequentially, so TRUNCATE in afterEach cleans up before the next

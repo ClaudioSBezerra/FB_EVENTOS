@@ -1,0 +1,27 @@
+-- FB_EVENTOS — Session tenant_id nullable (Phase 0, Plan 04 — Task 3 fix).
+--
+-- ARCHITECTURAL DECISION (Rule 1/4):
+--
+-- Plan 03 declared session.tenant_id NOT NULL with a strict RLS policy
+-- `tenant_id = current_setting(...)`. That works for tenant-scoped sessions
+-- after the user picks an active org — but Better Auth creates the session
+-- row at sign-in time, BEFORE the user has selected an active organization.
+-- This caused FAILED_TO_CREATE_USER in tests/auth/session-persist.test.ts.
+--
+-- Fix: make tenant_id NULLABLE and relax the RLS policy to permit reads
+-- when tenant_id IS NULL. The security property still holds because:
+--   - Better Auth looks up sessions by opaque token (unique, secret) —
+--     never via SELECT * scans. A null-tenant session can only be reached
+--     by someone who has the cookie.
+--   - Once setActiveOrganization is called (Phase 1+ org-selection flow),
+--     the session row's tenant_id is updated to match — and the
+--     `tenant_id = current_setting(...)` branch of the policy applies
+--     normally from that point on.
+--
+-- The policy uses `OR` so:
+--   - tenant_id IS NULL → permit (pre-org-selection session)
+--   - tenant_id = current_setting(...) → permit (matched tenant context)
+--   - else → deny (cross-tenant default-deny)
+--
+ALTER TABLE "session" ALTER COLUMN "tenant_id" DROP NOT NULL;--> statement-breakpoint
+ALTER POLICY "tenant_isolation" ON "session" TO fb_eventos_app USING ("session"."tenant_id" IS NULL OR "session"."tenant_id" = current_setting('app.current_tenant_id', true)::uuid) WITH CHECK ("session"."tenant_id" IS NULL OR "session"."tenant_id" = current_setting('app.current_tenant_id', true)::uuid);

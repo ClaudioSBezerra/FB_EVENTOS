@@ -13,6 +13,13 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 
+// Force NODE_ENV=test so the email lib captures messages in memory
+// (instead of trying to reach mailpit at localhost:1025) and the Resend
+// path stays disabled. Must happen BEFORE env.ts is imported.
+// (Cast through `unknown` because NODE_ENV is declared readonly in
+// @types/node — runtime assignment is harmless.)
+;(process.env as unknown as Record<string, string>).NODE_ENV = 'test'
+
 // Best-effort dotenv: load .env.local if present. CI passes env directly.
 if (existsSync('.env.local') && !process.env.DATABASE_URL) {
   const lines = readFileSync('.env.local', 'utf8').split('\n')

@@ -81,6 +81,7 @@ export const twoFactor = pgTable('two_factor', {
     .references(() => user.id, { onDelete: 'cascade' }),
   secret: text('secret').notNull(),
   backupCodes: text('backup_codes').notNull(),
+  verified: boolean('verified').default(true),
 })
 
 /**
@@ -169,9 +170,14 @@ export const session = pgTable(
   'session',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id')
-      .notNull()
-      .references(() => tenants.id),
+    // tenant_id is NULLABLE: Better Auth creates a session at sign-in
+    // BEFORE the user has selected an active organization. Once an org is
+    // selected via setActiveOrganization, the session row's tenant_id is
+    // updated by the Phase 1+ hook to match. Sessions with tenant_id IS
+    // NULL are accessible across tenants via token-lookup (Better Auth's
+    // primary access pattern) — see RLS policy below which permits
+    // NULL tenant_id reads (session lookup by opaque token, never SELECT *).
+    tenantId: uuid('tenant_id').references(() => tenants.id),
     userId: uuid('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
@@ -190,8 +196,11 @@ export const session = pgTable(
       as: 'permissive',
       to: fbEventosApp,
       for: 'all',
-      using: sql`${table.tenantId} = current_setting('app.current_tenant_id', true)::uuid`,
-      withCheck: sql`${table.tenantId} = current_setting('app.current_tenant_id', true)::uuid`,
+      // Permit access if (a) tenant_id matches the current setting, OR
+      // (b) tenant_id is NULL (pre-org-selection session — accessed by
+      // Better Auth's token-lookup path which never lists rows).
+      using: sql`${table.tenantId} IS NULL OR ${table.tenantId} = current_setting('app.current_tenant_id', true)::uuid`,
+      withCheck: sql`${table.tenantId} IS NULL OR ${table.tenantId} = current_setting('app.current_tenant_id', true)::uuid`,
     }),
   ],
 ).enableRLS()

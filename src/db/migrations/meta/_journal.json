@@ -29,6 +29,20 @@
       "when": 1781266193672,
       "tag": "0003_better_auth_extras",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781267626915,
+      "tag": "0004_session_tenant_id_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781268185627,
+      "tag": "0005_two_factor_verified",
+      "breakpoints": true
     }
   ]
 }

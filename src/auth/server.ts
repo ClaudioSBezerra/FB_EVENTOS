@@ -30,6 +30,16 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { organization, twoFactor } from 'better-auth/plugins'
 import { db } from '@/db'
+import {
+  account,
+  invitation,
+  member,
+  organization as organizationTable,
+  session,
+  twoFactor as twoFactorTable,
+  user,
+  verification,
+} from '@/db/schema/auth'
 import { sendEmail } from '@/lib/email'
 import { env } from '@/lib/env'
 
@@ -38,14 +48,31 @@ export const auth = betterAuth({
     provider: 'pg',
     schema: {
       // Map Better Auth's expected table names to our Drizzle schema.
-      // Plan 03 declared these tables — Better Auth needs to know which
-      // Drizzle objects to query.
+      // Plan 03 declared these tables — Better Auth needs the explicit map
+      // because it looks up models by name when issuing queries.
+      user,
+      account,
+      session,
+      verification,
+      organization: organizationTable,
+      member,
+      invitation,
+      twoFactor: twoFactorTable,
     },
   }),
 
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: [env.BETTER_AUTH_URL, env.NEXT_PUBLIC_APP_URL],
+
+  // Plan 03 schema uses uuid('id').defaultRandom() everywhere. Tell Better
+  // Auth to generate UUIDs so its INSERT values match the column type.
+  // (Default is a 32-char random string which fails on uuid columns.)
+  advanced: {
+    database: {
+      generateId: 'uuid',
+    },
+  },
 
   // AUTH-01 + AUTH-02: email/password with verification
   emailAndPassword: {
@@ -89,7 +116,12 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       consentVersion: { type: 'string', required: true },
-      consentAt: { type: 'string', required: true },
+      // type:'date' so Better Auth converts the ISO string payload to a
+      // Date instance before handing it to Drizzle's PgTimestamp column
+      // (mapToDriverValue calls toISOString on the Date). Without 'date'
+      // here, Drizzle receives a raw string and crashes (Rule 1 bug found
+      // during integration testing).
+      consentAt: { type: 'date', required: true },
       // consentIp is captured server-side by recordConsentMetadata
       // (src/lib/actions/consent.ts) reading from next/headers — NOT trusted
       // from the client signup payload. required:false here for that reason.
