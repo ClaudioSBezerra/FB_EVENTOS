@@ -12,10 +12,10 @@ Requisitos da release inicial. Cada um mapeado para uma fase no roadmap. Organiz
 - [ ] **FOUND-01**: Repo bootstrapped com Next.js 15 + TypeScript 5.6 + Drizzle ORM + PostgreSQL 16
 - [ ] **FOUND-02**: CI gate bloqueia presença de `sqlite3`/`@libsql`/`better-sqlite3` em `package.json` (anti-pitfall #1)
 - [ ] **FOUND-03**: CI gate bloqueia commit de arquivos `*.db`, `*.sqlite`, `tracker-*.db` (anti-pitfall #1)
-- [ ] **FOUND-04**: Pre-commit hook com `gitleaks` para evitar commit de secrets
-- [ ] **FOUND-05**: Pre-commit hook com `biome` (lint) e `tsc --noEmit` (type-check)
+- [x] **FOUND-04**: Pre-commit hook com `gitleaks` para evitar commit de secrets
+- [x] **FOUND-05**: Pre-commit hook com `biome` (lint) e `tsc --noEmit` (type-check)
 - [ ] **FOUND-06**: Dois arquivos `.env.example` (dev + prod) com mesmas chaves e placeholders explícitos
-- [ ] **FOUND-07**: Pipeline GitHub Actions: lint + typecheck + test + build em PR
+- [x] **FOUND-07**: Pipeline GitHub Actions: lint + typecheck + test + build em PR
 - [ ] **FOUND-08**: Deploy automatizado via Coolify + Traefik (TLS Let's Encrypt + roteamento por host)
 - [ ] **FOUND-09**: Imagem Docker multi-stage com semver tag (não `:latest` em produção)
 - [ ] **FOUND-10**: Logging estruturado JSON (Pino) desde a primeira request
@@ -207,10 +207,10 @@ Mapeamento de cada requisito v1 para sua fase do roadmap (cada REQ-ID aparece em
 | FOUND-01 | Phase 0 | Pending |
 | FOUND-02 | Phase 0 | Pending |
 | FOUND-03 | Phase 0 | Pending |
-| FOUND-04 | Phase 0 | Pending |
-| FOUND-05 | Phase 0 | Pending |
+| FOUND-04 | Phase 0 | Complete |
+| FOUND-05 | Phase 0 | Complete |
 | FOUND-06 | Phase 0 | Pending |
-| FOUND-07 | Phase 0 | Pending |
+| FOUND-07 | Phase 0 | Complete |
 | FOUND-08 | Phase 0 | Pending |
 | FOUND-09 | Phase 0 | Pending |
 | FOUND-10 | Phase 0 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Roadmap created and committed; ready to plan Phase 0
-last_updated: "2026-06-12T00:52:31.938Z"
-last_activity: 2026-06-12 -- Phase 00 execution started
+stopped_at: Completed 00-02-ci-anti-pitfall-gates-PLAN.md; ready for 00-03
+last_updated: "2026-06-12T01:35:42.169Z"
+last_activity: 2026-06-12
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 7
-  completed_plans: 0
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 00 (Foundation, Stack Lock & Anti-Pitfall Hardening) — EXECUTING
-Plan: 1 of 7
-Status: Executing Phase 00
-Last activity: 2026-06-12 -- Phase 00 execution started
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-06-12
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 29%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: N/A (project just initialized)
 
 *Updated after each plan completion*
+| Phase 00 P02 | 60min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ Recent decisions affecting current work:
 - Multi-tenant via RLS FORCED + role `fb_eventos_app` SEM `BYPASSRLS` desde a Phase 0
 - LGPD baseline (consent + audit + PII tags) na Phase 1; direito ao esquecimento completo na Phase 4
 - Pilot event: Festa de Trindade/GO (≤3 meses) — define escopo de Phase 1
+- [Phase 00]: Plan 02: six PR-blocking CI jobs + tag-only build-and-push + dependabot/CODEOWNERS/CONTRIBUTING — every contractual anti-pitfall is now a structural gate
+- [Phase 00]: Plan 02 established 'gate self-trip immunity' pattern after three Rule 1 fixes (drizzle-push, legacy-names, floating-tag) — gates must use --include filters and structural anchors so their own documentation cannot trip them
 
 ### Pending Todos
 
@@ -89,6 +92,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-11 16:45
-Stopped at: Roadmap created and committed; ready to plan Phase 0
+Last session: 2026-06-12T01:35:42.153Z
+Stopped at: Completed 00-02-ci-anti-pitfall-gates-PLAN.md; ready for 00-03
 Resume file: None
