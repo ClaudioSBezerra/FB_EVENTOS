@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 00-03-PLAN.md — Postgres + Drizzle + RLS foundation (docker compose without Redis, two-role pattern, RLS FORCED, withTenant wrapper, three RLS contract tests)
 - [x] 00-04-PLAN.md — Better Auth + multi-tenant middleware + auth UI (signup with LGPD consent, login, verify, reset, 2FA, /[slug]/dashboard, TENA-07 dual-tenant E2E)
 - [x] 00-05-PLAN.md — LGPD baseline + audit log (audit_log append-only, consent_records versioning, PII COMMENT ON COLUMN, soft-delete helpers, consent banner, docs/LGPD.md)
-- [ ] 00-06-PLAN.md — Observability + Graphile-Worker job harness (Pino + Sentry + child-logger bindings; Graphile-Worker runner/enqueue; ADR-0001; add_job signature probe)
+- [x] 00-06-PLAN.md — Observability + Graphile-Worker job harness (Pino + Sentry + child-logger bindings; Graphile-Worker runner/enqueue; ADR-0001; add_job signature probe)
 - [ ] 00-07-PLAN.md — Coolify deploy + health + walking-skeleton E2E (api/health, Dockerfile.worker, Coolify manifests, Traefik labels, RUNBOOK + BACKUP, Playwright E2E)
 
 ### Phase 1: Organizadora End-to-End (Piloto Festa de Trindade)
@@ -103,7 +103,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 5/7 | In Progress|  |
+| 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 6/7 | In Progress|  |
 | 1. Organizadora End-to-End (Piloto Festa de Trindade) | 0/TBD | Not started | - |
 | 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/TBD | Not started | - |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
