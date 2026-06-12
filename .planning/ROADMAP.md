@@ -12,7 +12,7 @@ FB_EVENTOS é entregue em cinco fases sequenciais (Phase 0 → 4) seguindo a dec
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 0: Foundation, Stack Lock & Anti-Pitfall Hardening** - Repo, CI gates, RLS multi-tenant, auth, LGPD baseline, deploy pipeline
+- [x] **Phase 0: Foundation, Stack Lock & Anti-Pitfall Hardening** - Repo, CI gates, RLS multi-tenant, auth, LGPD baseline, deploy pipeline (completed 2026-06-12)
 - [ ] **Phase 1: Organizadora End-to-End (Piloto Festa de Trindade)** - Evento + planta 2D + lotes + fornecedores + contrato + cobrança manual
 - [ ] **Phase 2: Fornecedor Self-Service + Checkout PIX/Cartão** - Portal fornecedor + reserva com TTL + Pagar.me hardened + webhooks idempotentes
 - [ ] **Phase 3: Prestador + Comissionamento + Assinatura Recorrente** - Mão de obra + split Pagar.me + subscription da organizadora + 4 fontes de receita
@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 00-04-PLAN.md — Better Auth + multi-tenant middleware + auth UI (signup with LGPD consent, login, verify, reset, 2FA, /[slug]/dashboard, TENA-07 dual-tenant E2E)
 - [x] 00-05-PLAN.md — LGPD baseline + audit log (audit_log append-only, consent_records versioning, PII COMMENT ON COLUMN, soft-delete helpers, consent banner, docs/LGPD.md)
 - [x] 00-06-PLAN.md — Observability + Graphile-Worker job harness (Pino + Sentry + child-logger bindings; Graphile-Worker runner/enqueue; ADR-0001; add_job signature probe)
-- [ ] 00-07-PLAN.md — Coolify deploy + health + walking-skeleton E2E (api/health, Dockerfile.worker, Coolify manifests, Traefik labels, RUNBOOK + BACKUP, Playwright E2E)
+- [x] 00-07-PLAN.md — Coolify deploy + health + walking-skeleton E2E (api/health, Dockerfile.worker, Coolify manifests, Traefik labels, RUNBOOK + BACKUP, Playwright E2E)
 
 ### Phase 1: Organizadora End-to-End (Piloto Festa de Trindade)
 **Goal**: Organizadora cadastra evento real (Festa de Trindade/GO), sobe planta, desenha lotes 2D clicáveis, cadastra/aprova fornecedores manualmente, emite contrato digital, cobra via link e vê dashboards de ocupação + financeiro — sem retornar para Excel/WhatsApp
@@ -103,7 +103,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 6/7 | In Progress|  |
+| 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 7/7 | Complete   | 2026-06-12 |
 | 1. Organizadora End-to-End (Piloto Festa de Trindade) | 0/TBD | Not started | - |
 | 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/TBD | Not started | - |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
