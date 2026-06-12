@@ -31,9 +31,8 @@
 // FAIL = signature drift; src/jobs/enqueue.ts and possibly migration 0008
 //        header need to be updated to match the new shape.
 
-import { afterAll, describe, expect, test } from 'vitest'
-
 import { run } from 'graphile-worker'
+import { afterAll, describe, expect, test } from 'vitest'
 import { migratorPool } from '@/test/db'
 
 interface PgProcRow {
@@ -83,11 +82,9 @@ describe('graphile_worker.add_job SQL signature probe (RESEARCH A1)', () => {
 
     // Print every signature so future developers can grep test output if
     // the signature drifts. (vitest run shows console.log on failure or
-    // with --reporter=verbose.)
-    // biome-ignore lint/suspicious/noConsole: probe output is the load-bearing artifact of this test
+    // with --reporter=verbose.) Biome's noConsole rule is disabled in tests.
     console.log('\n[A1 probe] Verified graphile_worker.add_job signatures:')
     for (const r of rows) {
-      // biome-ignore lint/suspicious/noConsole: probe output
       console.log(`  ${r.proname}(${r.args}) RETURNS ${r.return_type}`)
     }
 
@@ -119,6 +116,15 @@ describe('graphile_worker.add_job SQL signature probe (RESEARCH A1)', () => {
     expect((jobRows[0] as { n: number }).n).toBeGreaterThanOrEqual(2)
 
     // Cleanup so other tests / re-runs start from a clean queue.
-    await migratorPool`DELETE FROM graphile_worker._private_jobs WHERE task_identifier = '__probe'`
+    // Graphile-Worker 0.16.x normalizes task_identifier into a `_private_tasks`
+    // lookup row (`task_id` FK on `_private_jobs`). The `jobs` view joins them
+    // back, but the view is not updatable; deleting via a subquery into the
+    // tasks table is the version-stable form.
+    await migratorPool`
+      DELETE FROM graphile_worker._private_jobs
+      WHERE task_id IN (
+        SELECT id FROM graphile_worker._private_tasks WHERE identifier = '__probe'
+      )
+    `
   })
 })
