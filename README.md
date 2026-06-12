@@ -55,9 +55,31 @@ git push --follow-tags          # pushes the commit AND the tag
 ```
 
 The tag push triggers `.github/workflows/build-and-push.yml`, which builds
-the multi-stage image and pushes two tags to GHCR:
-`ghcr.io/<repo>:<x.y.z>` and `ghcr.io/<repo>:<commit-sha>`. Coolify pulls
-the semver tag, so a deploy is a deliberate, reviewable artifact.
+TWO multi-stage images and pushes them to GHCR — the web image
+(`ghcr.io/<repo>-web:<x.y.z>`) and the worker image
+(`ghcr.io/<repo>-worker:<x.y.z>`). Coolify pulls the semver tags
+explicitly so every deploy is a deliberate, reviewable artifact.
+
+## Deploy
+
+End-to-end Coolify deploy runbook: [`docs/deploy/COOLIFY.md`](docs/deploy/COOLIFY.md).
+
+Per-service manifests:
+
+- [`docker/coolify/web.service.md`](docker/coolify/web.service.md) — Next.js web container.
+- [`docker/coolify/worker.service.md`](docker/coolify/worker.service.md) — Graphile-Worker process.
+- [`docker/coolify/postgres.service.md`](docker/coolify/postgres.service.md) — Managed Postgres + RLS roles.
+- [`docker/coolify/traefik-labels.md`](docker/coolify/traefik-labels.md) — TLS + Host routing.
+
+Backup + restore procedures: [`docs/deploy/BACKUP.md`](docs/deploy/BACKUP.md).
+
+## Runbook
+
+Incident response: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+
+Covers: service down, DB unreachable, data corruption suspected,
+cross-tenant leak, read-only mode kill switch, FB_APU04 lessons +
+operator substitution table.
 
 ## Project structure
 
@@ -80,7 +102,7 @@ docker/                 Dockerfile + container env manifest
   `.gitignore` entries.
 
 Full stack reference: [`CLAUDE.md`](CLAUDE.md).
-Operational runbook: `docs/RUNBOOK.md` — created in Plan 07.
+Operational runbook: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
 ## License
 
