@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ConsentBanner } from '@/components/consent-banner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -14,7 +15,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        {/* LGPD-02: cookie consent banner. Renders on first visit only —
+            choice persisted to localStorage. See src/components/consent-banner.tsx. */}
+        <ConsentBanner />
+      </body>
     </html>
   )
 }
