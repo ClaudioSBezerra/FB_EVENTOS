@@ -1,0 +1,205 @@
+name: CI
+
+# Triggered on every PR to main and every push to main (post-merge sanity).
+# Branch protection should require these check names exactly so the gate is
+# load-bearing: anti-pitfall-gates / secrets-scan / lint-typecheck / test /
+# build / verify-no-latest-in-workflows.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Explicit minimum permissions at workflow level. The secrets-scan job opts in
+# to security-events:write for SARIF upload.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # =========================================================================
+  # Job 1 — anti-pitfall-gates (FOUND-04 / Pitfall #1 #16 #17 / T-0-03 T-0-04)
+  # =========================================================================
+  anti-pitfall-gates:
+    name: Anti-pitfall gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Embedded-DB ban
+        run: bash scripts/ci/check-no-embedded-db.sh
+
+      - name: Legacy fb_apu0[1-9] ban
+        run: bash scripts/ci/check-no-legacy-names.sh
+
+      - name: drizzle-kit push ban
+        run: bash scripts/ci/check-no-drizzle-push.sh
+
+      - name: Next.js 16 ban
+        run: bash scripts/ci/check-nextjs-version.sh
+
+  # =========================================================================
+  # Job 2 — secrets-scan (FOUND-04 / T-0-02)
+  # gitleaks-action@v2 requires full history (fetch-depth: 0).
+  # =========================================================================
+  secrets-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # =========================================================================
+  # Job 3 — lint-typecheck (FOUND-05)
+  # Depends on anti-pitfall-gates so a structural fail short-circuits this.
+  # =========================================================================
+  lint-typecheck:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    needs: anti-pitfall-gates
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Biome (errors only)
+        run: pnpm biome check --diagnostic-level=error src/
+
+      - name: TypeScript strict
+        run: pnpm tsc --noEmit
+
+  # =========================================================================
+  # Job 4 — test (Vitest)
+  # Postgres 16-alpine sidecar so Plan 03+ tests can hit a real DB. Plan 02
+  # has no tests yet, so --passWithNoTests keeps this green; Plan 03 onward
+  # adds real tests and the flag becomes redundant.
+  # =========================================================================
+  test:
+    name: Tests (Vitest)
+    runs-on: ubuntu-latest
+    needs: anti-pitfall-gates
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fb_test
+          POSTGRES_PASSWORD: fb_test
+          POSTGRES_DB: fb_eventos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Vitest run (--passWithNoTests until Plan 03)
+        run: pnpm exec vitest run --passWithNoTests
+        env:
+          DATABASE_URL: postgresql://fb_test:fb_test@localhost:5432/fb_eventos_test
+          DATABASE_MIGRATOR_URL: postgresql://fb_test:fb_test@localhost:5432/fb_eventos_test
+          BETTER_AUTH_SECRET: test-secret-32-chars-minimum-here
+          BETTER_AUTH_URL: http://localhost:3000
+          NEXT_TELEMETRY_DISABLED: 1
+
+  # =========================================================================
+  # Job 5 — build (FOUND-07)
+  # Smoke-tests `pnpm build` with placeholder env vars so a Next.js misconfig
+  # is caught at PR time. Depends on lint+test so we don't waste a build slot
+  # on red typecheck/test.
+  # =========================================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint-typecheck, test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Next.js build (placeholder env)
+        run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          DATABASE_URL: postgresql://localhost/placeholder
+          DATABASE_MIGRATOR_URL: postgresql://localhost/placeholder
+          BETTER_AUTH_SECRET: build-time-placeholder-32-chars-minimum
+          BETTER_AUTH_URL: http://localhost:3000
+
+  # =========================================================================
+  # Job 6 — verify-no-latest-in-workflows (T-0-07)
+  # Final PR-blocking grep gate. If `:latest` reappears in workflows/, dockerfiles,
+  # or compose files, fail before merge. Pairs with build-and-push.yml's
+  # own internal guard (Task 3).
+  # =========================================================================
+  verify-no-latest-in-workflows:
+    name: Verify no :latest tag in workflows/docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Grep for :latest in workflows and docker
+        run: |
+          set -euo pipefail
+          if grep -rnE ':latest\b' .github/workflows/ docker/ 2>/dev/null; then
+            echo "::error::Reintroduction of :latest tag detected in .github/workflows/ or docker/ — contractual ban (CLAUDE.md 'What NOT to Use' / T-0-07)."
+            exit 1
+          fi
+          echo "verify-no-latest: OK (no :latest references in workflows or docker/)"

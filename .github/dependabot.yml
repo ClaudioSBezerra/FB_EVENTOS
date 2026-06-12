@@ -1,0 +1,54 @@
+version: 2
+
+# FB_EVENTOS dependency update policy:
+#   * Weekly npm updates, grouped minor+patch so the maintainer reviews a single
+#     PR per ecosystem per week rather than dozens of micro-bumps.
+#   * Major bumps OPEN AS INDIVIDUAL PRs so they get a real human review.
+#   * Next.js 16 is BANNED from auto-bump — CLAUDE.md Version Compatibility +
+#     RESEARCH Pitfall 1 (middleware.ts → proxy.ts).
+#   * GitHub Actions weekly so action major-pin drift (e.g., gitleaks-action
+#     v2 → v3) gets surfaced rather than silently aging.
+updates:
+  # ---- npm ----
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Hard ban: Next.js 16 (RESEARCH Pitfall 1).
+      - dependency-name: 'next'
+        versions:
+          - '16.x'
+          - '>=16'
+      # Hard ban: any embedded-DB package, in case a transitive dep ever
+      # bubbles one up via dependabot suggestion.
+      - dependency-name: 'sqlite3'
+      - dependency-name: 'better-sqlite3'
+      - dependency-name: '@libsql/*'
+
+  # ---- GitHub Actions ----
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch

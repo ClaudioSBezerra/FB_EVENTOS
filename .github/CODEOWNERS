@@ -1,0 +1,19 @@
+# FB_EVENTOS code owners.
+#
+# Repository owner reviews everything by default until additional collaborators
+# join. Replace the placeholder handle with your GitHub username after the
+# repository is pushed to GitHub (README "Repository setup" section tracks
+# this as a follow-up).
+#
+# Higher-specificity rules override earlier ones (last match wins per GitHub
+# CODEOWNERS semantics).
+
+# Catch-all default owner (placeholder — update after first push).
+*       @REPO_OWNER_PLACEHOLDER
+
+# Security-sensitive paths get the same single owner today; split as the team
+# grows.
+/.github/workflows/   @REPO_OWNER_PLACEHOLDER
+/scripts/ci/          @REPO_OWNER_PLACEHOLDER
+/docker/              @REPO_OWNER_PLACEHOLDER
+/.gitleaks.toml       @REPO_OWNER_PLACEHOLDER
