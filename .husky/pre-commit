@@ -1,0 +1,56 @@
+#!/usr/bin/env sh
+
+# FB_EVENTOS pre-commit gate (Phase 0, Plan 01 — Task 2).
+# Defense-in-depth pair with the CI gates in Plan 02.
+# Exit-on-first-failure: secret scan → lint → typecheck → :latest guard.
+
+set -e
+
+# Git invokes hooks with a minimal PATH that may not include the user's
+# pnpm/corepack install location. Augment with the common ones so the hook
+# works regardless of how the shell was launched (terminal, GUI git, IDE).
+export PATH="${HOME}/.local/bin:${HOME}/.npm-global/bin:/usr/local/bin:/usr/bin:/bin:${PATH}"
+# Honor nvm's current node if it's been used (best-effort; safe if missing).
+if [ -z "${NVM_DIR:-}" ] && [ -d "${HOME}/.nvm" ]; then
+  NVM_DIR="${HOME}/.nvm"
+fi
+if [ -n "${NVM_DIR:-}" ] && [ -s "${NVM_DIR}/nvm.sh" ]; then
+  # shellcheck disable=SC1091
+  . "${NVM_DIR}/nvm.sh" >/dev/null 2>&1 || true
+fi
+
+# ---------------------------------------------------------------------------
+# 1) Secret scan via gitleaks (BINARY — install via scripts/install-gitleaks.sh)
+#    The npm package named "gitleaks" is NOT the real scanner (RESEARCH.md
+#    Package Legitimacy Audit) — do NOT add it to package.json.
+# ---------------------------------------------------------------------------
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner
+else
+  printf '\033[33m[pre-commit] WARN:\033[0m gitleaks binary not on PATH. '
+  printf 'Run: bash scripts/install-gitleaks.sh\n'
+  printf '[pre-commit] Skipping secret scan locally — CI (Plan 02) will still enforce.\n'
+fi
+
+# ---------------------------------------------------------------------------
+# 2) Biome lint (errors only — warnings stay non-blocking until project stabilizes)
+# ---------------------------------------------------------------------------
+pnpm biome check --diagnostic-level=error src/
+
+# ---------------------------------------------------------------------------
+# 3) TypeScript strict check
+# ---------------------------------------------------------------------------
+pnpm tsc --noEmit
+
+# ---------------------------------------------------------------------------
+# 4) :latest tag guard for docker/** (T-0-07 — Watchtower auto-pull anti-pattern)
+#    Block reintroduction of `:latest` in any staged file under docker/.
+# ---------------------------------------------------------------------------
+STAGED_DOCKER=$(git diff --cached --name-only --diff-filter=ACM -- 'docker/**' 2>/dev/null || true)
+if [ -n "$STAGED_DOCKER" ]; then
+  if echo "$STAGED_DOCKER" | xargs -r grep -l ':latest' 2>/dev/null; then
+    printf '\033[31m[pre-commit] ERROR:\033[0m `:latest` tag reintroduced in docker/. '
+    printf 'Pin a semver tag instead (see CLAUDE.md "Watchtower auto-pulling :latest").\n'
+    exit 1
+  fi
+fi

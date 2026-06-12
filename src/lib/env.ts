@@ -17,8 +17,7 @@ function readRequired(key: string): string {
   const value = process.env[key]
   if (value === undefined || value === '') {
     throw new Error(
-      `Missing required environment variable: ${key}. ` +
-        `See .env.example for the manifest.`,
+      `Missing required environment variable: ${key}. ` + `See .env.example for the manifest.`,
     )
   }
   return value

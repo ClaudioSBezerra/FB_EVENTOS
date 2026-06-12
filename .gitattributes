@@ -1,0 +1,11 @@
+# Normalize line endings so Husky shell hooks work on Windows checkouts.
+* text=auto eol=lf
+
+# Force LF on shell scripts, env manifests, and any other text we run with `sh`.
+*.sh        text eol=lf
+*.bash      text eol=lf
+.husky/*    text eol=lf
+.env.*      text eol=lf
+
+# Treat lockfile as text so diffs render but with no diff noise.
+pnpm-lock.yaml -diff

@@ -1,0 +1,22 @@
+# FB_EVENTOS gitleaks ruleset.
+#
+# Extends the default gitleaks rules (https://github.com/gitleaks/gitleaks)
+# with a narrow allowlist for the two committed env manifests, which contain
+# only placeholders (CHANGE_ME / GENERATE_WITH_*). The CI gitleaks-action in
+# Plan 02 reuses this file via the GITLEAKS_CONFIG env var.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow placeholder env manifests committed to the repo."
+paths = [
+  '''(?i)\.env\.example$''',
+  '''(?i)\.env\.production\.example$''',
+  # The container env manifest follows the same placeholder pattern.
+  '''(?i)docker/\.env\.docker\.example$''',
+]
+regexes = [
+  '''CHANGE_ME''',
+  '''GENERATE_WITH_openssl_rand''',
+]
