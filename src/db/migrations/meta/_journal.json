@@ -64,6 +64,13 @@
       "when": 1781273500000,
       "tag": "0008_graphile_worker_install",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781273600000,
+      "tag": "0009_graphile_worker_rls_policies",
+      "breakpoints": true
     }
   ]
 }

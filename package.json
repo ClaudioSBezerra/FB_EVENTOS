@@ -30,6 +30,8 @@
     "test": "vitest run",
     "test:unit": "vitest run --reporter=verbose",
     "test:watch": "vitest",
+    "worker:dev": "tsx --env-file=.env.local scripts/jobs/start-worker.ts",
+    "worker:start": "node dist/worker.js",
     "docker:build:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-web:$(node -p \"require('./package.json').version\") -f docker/Dockerfile ."
   },
   "dependencies": {
