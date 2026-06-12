@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 00-02-ci-anti-pitfall-gates-PLAN.md; ready for 00-03
-last_updated: "2026-06-12T01:35:42.169Z"
+stopped_at: Completed 00-03-postgres-drizzle-rls-foundation-PLAN.md; ready for 00-04
+last_updated: "2026-06-12T11:55:16.349Z"
 last_activity: 2026-06-12
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 00 (Foundation, Stack Lock & Anti-Pitfall Hardening) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-06-12
 
-Progress: [███░░░░░░░] 29%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [███░░░░░░░] 29%
 
 *Updated after each plan completion*
 | Phase 00 P02 | 60min | 3 tasks | 9 files |
+| Phase 00 P03 | 75min | 3 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - Pilot event: Festa de Trindade/GO (≤3 meses) — define escopo de Phase 1
 - [Phase 00]: Plan 02: six PR-blocking CI jobs + tag-only build-and-push + dependabot/CODEOWNERS/CONTRIBUTING — every contractual anti-pitfall is now a structural gate
 - [Phase 00]: Plan 02 established 'gate self-trip immunity' pattern after three Rule 1 fixes (drizzle-push, legacy-names, floating-tag) — gates must use --include filters and structural anchors so their own documentation cannot trip them
+- [Phase 00]: Plan 03: RLS contract enforced at catalog layer — two-role model (fb_eventos_app NOBYPASSRLS + fb_eventos_migrator), FORCE RLS on session/organization/member/invitation, withTenant() with SET LOCAL semantics, 10/10 contract tests GREEN — T-0-01 mitigated at the deepest layer; multi-tenant promise enforced by Postgres catalog and asserted on every CI run
+- [Phase 00]: Plan 03 established '.enableRLS()' pattern (drizzle 0.45.2 API; .withRLS rename pending future bump) and 'fixtures via appPool + SET LOCAL' pattern (production-realistic test writes — RLS misconfig surfaces in test setup, not in prod)
 
 ### Pending Todos
 
@@ -92,6 +95,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-12T01:35:42.153Z
-Stopped at: Completed 00-02-ci-anti-pitfall-gates-PLAN.md; ready for 00-03
+Last session: 2026-06-12T11:55:16.319Z
+Stopped at: Completed 00-03-postgres-drizzle-rls-foundation-PLAN.md; ready for 00-04
 Resume file: None

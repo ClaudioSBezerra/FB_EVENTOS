@@ -16,15 +16,15 @@ Requisitos da release inicial. Cada um mapeado para uma fase no roadmap. Organiz
 - [x] **FOUND-05**: Pre-commit hook com `biome` (lint) e `tsc --noEmit` (type-check)
 - [ ] **FOUND-06**: Dois arquivos `.env.example` (dev + prod) com mesmas chaves e placeholders explícitos
 - [x] **FOUND-07**: Pipeline GitHub Actions: lint + typecheck + test + build em PR
-- [ ] **FOUND-08**: Deploy automatizado via Coolify + Traefik (TLS Let's Encrypt + roteamento por host)
+- [x] **FOUND-08**: Deploy automatizado via Coolify + Traefik (TLS Let's Encrypt + roteamento por host)
 - [ ] **FOUND-09**: Imagem Docker multi-stage com semver tag (não `:latest` em produção)
-- [ ] **FOUND-10**: Logging estruturado JSON (Pino) desde a primeira request
+- [x] **FOUND-10**: Logging estruturado JSON (Pino) desde a primeira request
 - [ ] **FOUND-11**: Error tracking Sentry configurado (frontend + backend)
 - [ ] **FOUND-12**: Backup PITR do PostgreSQL configurado (>=7 dias retention)
 - [ ] **FOUND-13**: Runbook mínimo escrito (`docs/RUNBOOK.md`) com procedimentos de incidente
 - [ ] **FOUND-14**: Decisão registrada em ADR: Graphile-Worker vs pg-boss (fila Postgres-backed)
-- [ ] **FOUND-15**: Versões alvo verificadas live no npm e travadas em `package.json` (Next 15.x, Drizzle 0.45.x, Better Auth 1.6.x, Node 22 LTS)
-- [ ] **FOUND-16**: Postgres extensions necessárias (`pgcrypto`, `pg_trgm`) confirmadas disponíveis no Coolify
+- [x] **FOUND-15**: Versões alvo verificadas live no npm e travadas em `package.json` (Next 15.x, Drizzle 0.45.x, Better Auth 1.6.x, Node 22 LTS)
+- [x] **FOUND-16**: Postgres extensions necessárias (`pgcrypto`, `pg_trgm`) confirmadas disponíveis no Coolify
 
 ### Identity & Multi-Tenancy (Cross-cutting — base para todas as fases)
 
@@ -33,11 +33,11 @@ Requisitos da release inicial. Cada um mapeado para uma fase no roadmap. Organiz
 - [ ] **AUTH-03**: Reset de senha por email
 - [ ] **AUTH-04**: Sessão persiste entre refreshes do browser (Better Auth session em Postgres)
 - [ ] **AUTH-05**: 2FA opcional (TOTP) para conta da organizadora
-- [ ] **TENA-01**: Toda tabela de domínio tem coluna `tenant_id` (FK para `tenants`)
-- [ ] **TENA-02**: PostgreSQL Row-Level Security habilitado e **FORCED** em toda tabela tenant-owned (anti-pitfall #2)
-- [ ] **TENA-03**: User da app conecta no Postgres SEM `BYPASSRLS` (role dedicado `fb_eventos_app`)
-- [ ] **TENA-04**: User de migrations conecta com role separado `fb_eventos_migrator` com permissões DDL
-- [ ] **TENA-05**: Middleware de request faz `SET LOCAL app.current_tenant_id = ?` baseado no session do Better Auth
+- [x] **TENA-01**: Toda tabela de domínio tem coluna `tenant_id` (FK para `tenants`)
+- [x] **TENA-02**: PostgreSQL Row-Level Security habilitado e **FORCED** em toda tabela tenant-owned (anti-pitfall #2)
+- [x] **TENA-03**: User da app conecta no Postgres SEM `BYPASSRLS` (role dedicado `fb_eventos_app`)
+- [x] **TENA-04**: User de migrations conecta com role separado `fb_eventos_migrator` com permissões DDL
+- [x] **TENA-05**: Middleware de request faz `SET LOCAL app.current_tenant_id = ?` baseado no session do Better Auth
 - [ ] **TENA-06**: Tenant resolution por path (`app.fbeventos.com/{tenant-slug}`) via Next.js `middleware.ts`
 - [ ] **TENA-07**: Integration test com 2 tenants garante isolamento (tenant A não vê dados do tenant B)
 - [ ] **TENA-08**: RBAC mínimo: roles `owner` / `admin` / `viewer` por organização (Better Auth org plugin)
@@ -211,25 +211,25 @@ Mapeamento de cada requisito v1 para sua fase do roadmap (cada REQ-ID aparece em
 | FOUND-05 | Phase 0 | Complete |
 | FOUND-06 | Phase 0 | Pending |
 | FOUND-07 | Phase 0 | Complete |
-| FOUND-08 | Phase 0 | Pending |
+| FOUND-08 | Phase 0 | Complete |
 | FOUND-09 | Phase 0 | Pending |
-| FOUND-10 | Phase 0 | Pending |
+| FOUND-10 | Phase 0 | Complete |
 | FOUND-11 | Phase 0 | Pending |
 | FOUND-12 | Phase 0 | Pending |
 | FOUND-13 | Phase 0 | Pending |
 | FOUND-14 | Phase 0 | Pending |
-| FOUND-15 | Phase 0 | Pending |
-| FOUND-16 | Phase 0 | Pending |
+| FOUND-15 | Phase 0 | Complete |
+| FOUND-16 | Phase 0 | Complete |
 | AUTH-01 | Phase 0 | Pending |
 | AUTH-02 | Phase 0 | Pending |
 | AUTH-03 | Phase 0 | Pending |
 | AUTH-04 | Phase 0 | Pending |
 | AUTH-05 | Phase 0 | Pending |
-| TENA-01 | Phase 0 | Pending |
-| TENA-02 | Phase 0 | Pending |
-| TENA-03 | Phase 0 | Pending |
-| TENA-04 | Phase 0 | Pending |
-| TENA-05 | Phase 0 | Pending |
+| TENA-01 | Phase 0 | Complete |
+| TENA-02 | Phase 0 | Complete |
+| TENA-03 | Phase 0 | Complete |
+| TENA-04 | Phase 0 | Complete |
+| TENA-05 | Phase 0 | Complete |
 | TENA-06 | Phase 0 | Pending |
 | TENA-07 | Phase 0 | Pending |
 | TENA-08 | Phase 0 | Pending |
