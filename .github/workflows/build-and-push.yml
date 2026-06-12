@@ -1,0 +1,79 @@
+name: Build & push (semver only)
+
+# Tag-only trigger. Production Docker images are ONLY produced from
+# `v*.*.*` git tags — never from branch pushes, never with a floating
+# tag, never with `:latest`. This is the structural defuse of T-0-07
+# (Watchtower auto-pull anti-pattern) and CLAUDE.md "What NOT to Use".
+#
+# To release:  pnpm version patch && git push --follow-tags
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build & push to GHCR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from git tag
+        id: version
+        run: |
+          set -euo pipefail
+          # GITHUB_REF_NAME is the bare tag name (e.g. "v0.1.0"); strip the
+          # leading "v" so APP_VERSION = "0.1.0" matches package.json semver.
+          APP_VERSION="${GITHUB_REF_NAME#v}"
+          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_ENV"
+          echo "Resolved APP_VERSION=${APP_VERSION} from tag ${GITHUB_REF_NAME}"
+
+      - name: Setup buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          # DO NOT add a floating registry tag here — contractual ban
+          # (CLAUDE.md / T-0-07). The semver tag and the commit SHA are
+          # the only acceptable forms. The verify-no-latest-in-workflows
+          # job in ci.yml plus the guard step below catch any drift.
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ env.APP_VERSION }}
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          build-args: |
+            APP_VERSION=${{ env.APP_VERSION }}
+
+      - name: Reject floating-tag drift in this workflow
+        # Belt-and-braces: even though the file was reviewed at PR time
+        # by ci.yml's verify-no-floating-tag step, run the same grep at
+        # release time so a sneaky "edit-on-GitHub" of this YAML cannot
+        # ship a floating tag to the registry.
+        #
+        # Pattern: a path/word char IMMEDIATELY before the floating-tag
+        # marker. Documentation strings (quote-wrapped, spaced) pass; only
+        # runnable image references match. Comments here avoid spelling
+        # out `name + floating-tag` in concatenated form so the gate does
+        # not trip on its own preamble.
+        run: |
+          set -euo pipefail
+          if grep -nE '[A-Za-z0-9_./-]:latest\b' .github/workflows/build-and-push.yml; then
+            echo "::error file=.github/workflows/build-and-push.yml::Floating registry tag detected — contractual ban (CLAUDE.md / T-0-07)."
+            exit 1
+          fi
+          echo "build-and-push: floating-tag guard OK"

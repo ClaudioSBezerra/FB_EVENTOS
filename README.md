@@ -44,6 +44,21 @@ The build is multi-stage (`docker/Dockerfile`) and produces a Next.js
 `:latest` is structurally forbidden (mitigates the Watchtower auto-pull
 anti-pattern; see CLAUDE.md "What NOT to Use").
 
+## Release
+
+Production images are only built from `v*.*.*` git tags — never from a
+branch push, never with a floating tag.
+
+```bash
+pnpm version patch              # bumps package.json + creates v<x.y.z> tag
+git push --follow-tags          # pushes the commit AND the tag
+```
+
+The tag push triggers `.github/workflows/build-and-push.yml`, which builds
+the multi-stage image and pushes two tags to GHCR:
+`ghcr.io/<repo>:<x.y.z>` and `ghcr.io/<repo>:<commit-sha>`. Coolify pulls
+the semver tag, so a deploy is a deliberate, reviewable artifact.
+
 ## Project structure
 
 ```

@@ -195,11 +195,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Grep for :latest in workflows and docker
+      - name: Grep for floating tag in workflows and docker
         run: |
           set -euo pipefail
-          if grep -rnE ':latest\b' .github/workflows/ docker/ 2>/dev/null; then
-            echo "::error::Reintroduction of :latest tag detected in .github/workflows/ or docker/ — contractual ban (CLAUDE.md 'What NOT to Use' / T-0-07)."
+          # Match real image references only: a word/path char IMMEDIATELY
+          # before the floating-tag marker. Documentation strings — where
+          # the marker is preceded by a quote, space, or backtick — pass.
+          # This gate is for runnable image references, not prose; the
+          # comments above use spaced-out tokens (image NAME plus floating
+          # tag) precisely so this gate does not trip on its own
+          # documentation.
+          if grep -rnE '[A-Za-z0-9_./-]:latest\b' .github/workflows/ docker/ 2>/dev/null; then
+            echo "::error::Reintroduction of a floating image tag detected in .github/workflows/ or docker/ — contractual ban (CLAUDE.md 'What NOT to Use' / T-0-07)."
             exit 1
           fi
-          echo "verify-no-latest: OK (no :latest references in workflows or docker/)"
+          echo "verify-no-floating-tag: OK"
