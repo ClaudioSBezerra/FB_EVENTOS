@@ -63,6 +63,10 @@ const envSchema = z.object({
   MINIO_SECRET_KEY: z.string().optional(),
   MINIO_USE_SSL: z.string().optional(),
   MINIO_DEFAULT_BUCKET: z.string().optional(),
+  // Public endpoint embedded in pre-signed URLs delivered to the browser.
+  // Differs from MINIO_ENDPOINT in Coolify because the web container talks
+  // to MinIO via the internal hostname while browsers need the public one.
+  MINIO_PUBLIC_ENDPOINT: z.string().optional(),
 
   // Observability (Plan 06)
   SENTRY_DSN: z.string().optional(),

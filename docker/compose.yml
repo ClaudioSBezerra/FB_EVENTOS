@@ -44,17 +44,30 @@ services:
     container_name: fb-eventos-minio
     command: server /data --console-address ':9001'
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      # Local dev creds — defaults match `mc alias` bootstrap in
+      # scripts/minio/setup-buckets.sh. Production creds live in Coolify
+      # env UI (see docker/coolify/minio.service.md). NEVER ship these
+      # values to production.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # Coolify routes the browser-facing console through Traefik at this
+      # subdomain in production. Default left blank for local dev — MinIO
+      # serves the console at http://localhost:9001 in that case.
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-}
     ports:
       - '9000:9000'
       - '9001:9001'
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ['CMD', 'mc', 'ready', 'local']
+      # `/minio/health/live` is the HTTP probe endpoint — simpler than the
+      # `mc ready local` command which requires `mc` to be configured first.
+      # 200 = service up; non-200 = unhealthy.
+      test:
+        - CMD-SHELL
+        - 'wget -qO- http://localhost:9000/minio/health/live > /dev/null 2>&1 || exit 1'
       interval: 30s
-      timeout: 20s
+      timeout: 5s
       retries: 3
 
   mailpit:
