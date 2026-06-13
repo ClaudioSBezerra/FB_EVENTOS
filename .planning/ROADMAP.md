@@ -51,7 +51,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Sistema gera contrato digital PDF via Graphile-Worker job, envia para e-sign (ZapSign **ou** Clicksign — decisão registrada em ADR durante Phase 1) e cria cobrança Pagar.me simples (PIX/cartão, sem split ainda) para o lote atribuído
   4. Dashboard mostra mapa de ocupação da planta colorido por status (`available`/`reserved`/`sold`) com % vendido em R$ e em m²; dashboard financeiro mostra recebido, a receber e comissão da plataforma calculada
   5. Organizadora e fornecedor recebem email Resend em cada mudança de status (cadastro, aprovação, contrato emitido) — ≥1 lote real do piloto Trindade é vendido via FB_EVENTOS sem voltar a Excel/WhatsApp
-**Plans**: TBD
+**Plans**: 8 plans
+- [ ] 01-01-PLAN.md — Test infra Wave 0 + MinIO infra + domain schema bootstrap (12 tables FORCE RLS + PII comments + setActiveOrg hook)
+- [ ] 01-02-PLAN.md — Event CRUD + planta upload (pre-signed PUT direto browser→MinIO; statObject verification)
+- [ ] 01-03-PLAN.md — Konva editor + lots (polygon2d v1 jsonb) + categories (aditivo pricing) + lot assignment + ADR-0003
+- [ ] 01-04-PLAN.md — Fornecedor CRUD + approval FSM + BrasilAPI CNPJ (2-layer + degrade-with-warning + 7d cache) + vendor doc cofre
+- [ ] 01-05-PLAN.md — Contracts + @react-pdf templates + ZapSign sequential signers + webhook re-fetch defense + ADR-0002 + ADR-0004
+- [ ] 01-06-PLAN.md — Pagar.me v5 simple charges (PIX + cartão, sem split) + webhook re-fetch defense + idempotency
+- [ ] 01-07-PLAN.md — Dashboards ocupação (Konva read-only colorido) + financeiro (recebido / a receber / comissão por fornecedor)
+- [ ] 01-08-PLAN.md — Resend pt-BR templates (6 events) + walking-skeleton D-14 4-step gate extension + RUNBOOK operator flip checklist (checkpoint)
 **UI hint**: yes
 
 ### Phase 2: Fornecedor Self-Service + Checkout PIX/Cartão
