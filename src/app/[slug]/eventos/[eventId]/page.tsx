@@ -131,6 +131,11 @@ export default async function EventoDetailPage({ params }: PageProps) {
             <p className="text-sm text-slate-500">Nenhuma planta cadastrada ainda.</p>
           )}
           <PlantaUploader eventId={ev.id} tenantSlug={slug} />
+          <div className="pt-2">
+            <Button asChild variant="outline">
+              <Link href={`/${slug}/eventos/${ev.id}/planta`}>Abrir editor da planta →</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </main>
