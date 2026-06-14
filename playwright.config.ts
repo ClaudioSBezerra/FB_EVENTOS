@@ -39,6 +39,20 @@ export default defineConfig({
       name: 'chromium',
       use: devices['Desktop Chrome'],
     },
+    {
+      // D-14 gate — Phase 1 piloto Trindade. Runs the same Chromium
+      // config but with explicit sandbox env defaults injected via the
+      // tests/e2e/fixtures/d14-gate-fixtures.ts module (ensureSandboxEnv).
+      // The existing walking-skeleton/planta-editor specs ARE NOT
+      // included in this project — they run under 'chromium' above.
+      // The d14-gate project narrows to the describe.serial block:
+      //   tests/e2e/walking-skeleton.spec.ts → "D-14 gate" describe
+      // by using --grep at invocation time:
+      //   pnpm test:e2e --project=d14-gate --grep "D-14 gate"
+      name: 'd14-gate',
+      use: devices['Desktop Chrome'],
+      testMatch: /walking-skeleton\.spec\.ts/,
+    },
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined

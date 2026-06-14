@@ -320,6 +320,135 @@ catalog.
 
 ---
 
+## Phase 1 — D-14 Gate Sandbox→Production Flip
+
+**Origin:** Phase 1 Plan 01-08 (Walking-Skeleton + D-14 Gate). The "D-14"
+nickname refers to the 14-day countdown to the Festa de Trindade piloto —
+fourteen days before the event, the gate must be GREEN end-to-end in
+sandbox before the operator flips the staging container to production
+gateway credentials.
+
+### Pre-conditions
+
+Before invoking this checklist, BOTH must be true:
+
+1. The four D-14 steps pass GREEN in CI:
+   ```bash
+   pnpm test:e2e --project=d14-gate --grep "D-14 gate"
+   ```
+   Expected output (per spec at `tests/e2e/walking-skeleton.spec.ts`):
+   - ✅ Step 1: signup organizadora → setActiveOrg trindade
+   - ✅ Step 2: event + planta upload + 1 lot drawn + assigned to vendor
+   - ✅ Step 3: contract emit + sandbox sign both signers → status='signed'
+   - ✅ Step 4: PIX charge + sandbox payment → status='paid'
+
+2. The operator (you, claudio_bezerra@hotmail.com) explicitly approves the
+   flip in writing (commit message or audit-log row) — the checkpoint in
+   the plan is NOT auto-approved by the executor.
+
+### Operator Checklist (numbered, in order)
+
+> **CRITICAL:** Each step changes a real production credential. Run them
+> in order. Stop at the first failure and execute the **Rollback** below.
+
+1. **Verify Resend production API key**
+   - Coolify dashboard → `fb-eventos-web` → Environment → confirm
+     `RESEND_API_KEY` is the **production** key from
+     https://resend.com/api-keys (not the dev sandbox key).
+   - Send a test email via Resend dashboard "Send test" feature to
+     yourself; confirm delivery within 30 seconds.
+
+2. **Flip Pagar.me to production**
+   - Coolify env edits:
+     ```
+     PAGARME_ENV=sandbox     → PAGARME_ENV=production
+     PAGARME_SECRET_KEY=sk_test_xxx → PAGARME_SECRET_KEY={{prod}}
+     ```
+   - Production secret key is at https://dashboard.pagar.me → Configurações →
+     Keys → "Live mode".
+   - Save Coolify env; **do not restart yet** — restart after step 3.
+
+3. **Flip ZapSign to production**
+   - Coolify env edits:
+     ```
+     ZAPSIGN_ENV=sandbox     → ZAPSIGN_ENV=production
+     ZAPSIGN_TOKEN={{sandbox}} → ZAPSIGN_TOKEN={{prod}}
+     ```
+   - Production token is at https://app.zapsign.com.br → Conta → API.
+   - Save Coolify env.
+
+4. **Restart staging container**
+   - Coolify dashboard → `fb-eventos-web` → Restart.
+   - Wait 60s; curl the health probe:
+     ```bash
+     curl -fsSL https://{{PRODUCTION_HOST}}/api/health
+     ```
+   - Expected: `{ "ok": true, "checks": { "db": true, "redis": true } }`.
+
+5. **Run low-value smoke charge against real Pagar.me production**
+   - Create a real "Stand 1 m²" lot in the production trindade tenant
+     (R$ 1,00).
+   - Drive the full UI flow as a real fornecedor: signup → approve →
+     create contract → assinar via ZapSign **production** → PIX charge
+     R$ 1,00 → confirm payment receipt in the Pagar.me production
+     dashboard within 5 minutes.
+   - Confirm the `payments` row in the production DB transitions
+     `pending → paid` with `paid_at` populated.
+   - Confirm the `pagamento_recebido` Resend email lands in the operator
+     inbox.
+
+6. **Audit-log the flip (LGPD-04)**
+   - Manually INSERT an `audit_log` row tagged with the operator's
+     identity + timestamp. Use the migrator pool (BYPASSRLS) since this
+     is a cross-tenant operational event:
+     ```sql
+     INSERT INTO audit_log (
+       tenant_id, user_id, action, entity, entity_id, payload, created_at
+     ) VALUES (
+       '{{TRINDADE_TENANT_ID}}', '{{OPERATOR_USER_ID}}',
+       'd14_gate.production_flip', 'system', NULL,
+       jsonb_build_object(
+         'pagarme_env_before', 'sandbox',
+         'pagarme_env_after', 'production',
+         'zapsign_env_before', 'sandbox',
+         'zapsign_env_after', 'production',
+         'smoke_charge_payment_id', '{{SMOKE_PAYMENT_ID}}',
+         'operator_email', 'claudio_bezerra@hotmail.com'
+       ),
+       NOW()
+     );
+     ```
+   - This row is the legal record that the flip happened, by whom, at
+     what UTC time. It is append-only by GRANT layer — once written it
+     cannot be tampered with from the runtime app role.
+
+### Rollback (if any step above fails)
+
+1. Revert env vars in Coolify:
+   ```
+   PAGARME_ENV=production   → PAGARME_ENV=sandbox
+   PAGARME_SECRET_KEY={{prod}} → PAGARME_SECRET_KEY=sk_test_xxx
+   ZAPSIGN_ENV=production   → ZAPSIGN_ENV=sandbox
+   ZAPSIGN_TOKEN={{prod}}   → ZAPSIGN_TOKEN={{sandbox}}
+   ```
+2. Restart the container.
+3. Verify the D-14 sandbox E2E suite still GREEN.
+4. Insert an audit-log row with `action='d14_gate.production_flip_rolled_back'`
+   + the failure reason in payload.
+5. Investigate the failed step BEFORE re-attempting the flip.
+
+### Operator Substitution Variables (for this section)
+
+| Placeholder                     | Description                                              |
+| ------------------------------- | -------------------------------------------------------- |
+| `{{PAGARME_SECRET_KEY_PROD}}`   | Pagar.me v5 production secret key (sk_live_*)            |
+| `{{ZAPSIGN_TOKEN_PROD}}`        | ZapSign production API token                             |
+| `{{TRINDADE_TENANT_ID}}`        | UUID of the trindade tenant in production DB             |
+| `{{OPERATOR_USER_ID}}`          | Better Auth `user.id` of claudio_bezerra                 |
+| `{{SMOKE_PAYMENT_ID}}`          | `payments.id` of the R$ 1,00 smoke charge from step 5    |
+
+---
+
 ## See Also
 
 - `docs/deploy/COOLIFY.md` — deploy procedure.
@@ -327,3 +456,4 @@ catalog.
 - `docs/LGPD.md` — LGPD compliance reference.
 - `docs/adr/0001-queue-backend.md` — job-queue architecture decision.
 - `docker/coolify/*.md` — per-service manifests.
+- `tests/e2e/walking-skeleton.spec.ts` — walking-skeleton + D-14 gate E2E suite.
