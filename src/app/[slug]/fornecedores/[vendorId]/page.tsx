@@ -12,8 +12,11 @@ import { notFound, redirect } from 'next/navigation'
 
 import { auth } from '@/auth/server'
 import { VendorApprovalPanel } from '@/components/fornecedores/vendor-approval-panel'
+import { VendorDocList } from '@/components/fornecedores/vendor-doc-list'
+import { VendorDocUploader } from '@/components/fornecedores/vendor-doc-uploader'
 import { withTenant } from '@/db/with-tenant'
 import { getVendorByIdInTenant } from '@/lib/actions/fornecedores'
+import { listVendorDocsInTenant } from '@/lib/actions/vendor-docs'
 import { resolveTenantBySlug } from '@/lib/tenant'
 import { formatCNPJ } from '@/lib/validators/cnpj'
 
@@ -45,10 +48,14 @@ export default async function FornecedorDetailPage({ params }: PageProps) {
     )
   }
 
-  const vendor = await withTenant(tenant.id, async (db) =>
-    getVendorByIdInTenant(db, { id: vendorId }),
-  )
-  if (!vendor) notFound()
+  const data = await withTenant(tenant.id, async (db) => {
+    const v = await getVendorByIdInTenant(db, { id: vendorId })
+    if (!v) return null
+    const docs = await listVendorDocsInTenant(db, { vendorId: v.id })
+    return { vendor: v, docs }
+  })
+  if (!data) notFound()
+  const { vendor, docs } = data
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
@@ -85,7 +92,15 @@ export default async function FornecedorDetailPage({ params }: PageProps) {
 
       <VendorApprovalPanel vendorId={vendor.id} status={vendor.status} />
 
-      {/* Document cofre uploader + list — wired in Task 3. */}
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Documentos do fornecedor</h2>
+        <p className="text-sm text-slate-600">
+          Cofre LGPD-compatível: uploads pre-signed direto para MinIO, downloads geram trilha de
+          auditoria por acesso.
+        </p>
+        <VendorDocUploader tenantSlug={slug} vendorId={vendor.id} />
+        <VendorDocList tenantSlug={slug} vendorId={vendor.id} docs={docs} />
+      </section>
     </main>
   )
 }
