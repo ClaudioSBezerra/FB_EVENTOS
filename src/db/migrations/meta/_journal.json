@@ -113,6 +113,13 @@
       "when": 1781383061119,
       "tag": "0015_pagarme_webhook_tenant_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781383161119,
+      "tag": "0016_tenant_platform_commission",
+      "breakpoints": true
     }
   ]
 }

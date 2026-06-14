@@ -13,7 +13,7 @@
 //   - `ALTER TABLE <name> FORCE ROW LEVEL SECURITY` in 0002_force_rls.sql
 // See RESEARCH Pattern 1 for the canonical shape.
 
-import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 export const tenants = pgTable(
   'tenants',
@@ -21,6 +21,16 @@ export const tenants = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     slug: text('slug').notNull().unique(),
     name: text('name').notNull(),
+    /**
+     * Platform commission rate applied to paid charges (0..1).
+     * Default 0.0500 = 5% (Plan 01-07).
+     *
+     * NOT PII — operational config. The financial dashboard uses this to
+     * compute `comissao = sum(paid_amount) × platform_commission_pct`.
+     */
+    platformCommissionPct: numeric('platform_commission_pct', { precision: 5, scale: 4 })
+      .notNull()
+      .default('0.0500'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     // LGPD-05 soft-delete column (Plan 05 wires query helpers and the
     // anonymize-after-retention Graphile-Worker job).
