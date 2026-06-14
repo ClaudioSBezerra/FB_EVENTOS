@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 1 at 6/8 plans (01-06 code+tests committed, SUMMARY pending) — session limit hit; resets 15:30 BRT"
-last_updated: "2026-06-14T17:24:22.767Z"
+stopped_at: Phase 1 at 7/8 plans (01-07 dashboards complete; 169/169 tests GREEN)
+last_updated: "2026-06-14T17:57:22.083Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 14
   percent: 20
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 01 (Organizadora End-to-End (Piloto Festa de Trindade)) — EXECUTING
-Plan: 5 of 8
+Plan: 8 of 8
 Status: Ready to execute
 Last activity: 2026-06-14
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [████████░░] 80%
 | Phase 01 P02 | 55min | 2 tasks | 13 files |
 | Phase 01 P04 | 80 | 3 tasks | 18 files |
 | Phase 01 P05 | 145 | 3 tasks | 35 files |
+| Phase 01 P07 | 25 | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01]: Plan 01-04 established 'no-RLS on global public-data cache' pattern (cnpj_lookup_cache stores Receita Federal data shared cross-tenant); COMMENT ON TABLE documents the no-RLS decision so future contributors don't 'fix' it
 - [Phase ?]: [Phase 01]: Plan 01-04 established 'audit-on-every-download' pattern for LGPD compliance: mintVendorDocDownloadUrl writes audit_log row BEFORE returning URL — the audit row IS the compliance contract, not the URL itself. Cross-tenant attempts throw BEFORE recordAudit to avoid polluting victim's audit_log
 - [Phase ?]: [Phase 01]: Plan 01-05: Contracts PDF + ZapSign vertical landed — @react-pdf/renderer + sequential signers + belt-and-suspenders webhook defense (Basic Auth + API re-fetch). Two new ADRs (0002 ZapSign over Clicksign; 0004 @react-pdf over Puppeteer). Two-step outbox chain pdf.generate-contract → zapsign.send-contract → email.send-status-update with per-step atomicity. Migration 0014 narrow SELECT-only RLS policy for migrator on zapsign_documents replaces a SECURITY DEFINER approach blocked by PG 18 ALTER FUNCTION OWNER schema-CREATE check. 18 new tests bring suite to 144 GREEN.
+- [Phase 01]: Plan 01-07: occupancy + financial dashboards landed. Migration 0016 (tenant.platform_commission_pct numeric(5,4) DEFAULT 0.0500); three Server Action helpers (getEventOccupancy, getEventFinancials, getEventLotsForDashboard) following the established pure-helper + thin-action pattern; PlantaEditor extended with mode='dashboard' prop (no Transformer, status-color fill, inline DashboardLotPopover sub-component — no Radix Popover dep, matches minimal-shadcn project style). 12 new tests bring suite to 169 GREEN; ORG-13 + ORG-14 delivered.
+- [Phase 01]: Plan 01-07 established 'inline-popover-over-Radix' pattern (single-purpose absolute-positioned popover lives in the parent client component; avoids a new @radix-ui dep — same approach as Plan 01-03 lot-assignment-dialog) and 'GROUP BY + FILTER + COALESCE single-roundtrip dashboard SQL' pattern + 'getLotColorForStatus single-source-of-truth' for status→color mapping (Phase 2 SSE can reuse without UI duplication)
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T17:24:22.752Z
-Stopped at: Phase 1 at 6/8 plans (01-06 code+tests committed, SUMMARY pending) — session limit hit; resets 15:30 BRT
-Resume file: .planning/phases/01-organizadora-end-to-end-piloto-festa-de-trindade/01-06-pagarme-charges-PLAN.md
+Last session: 2026-06-14T17:57:22.067Z
+Stopped at: Phase 1 at 7/8 plans (01-07 dashboards complete; 169/169 tests GREEN)
+Resume file: .planning/phases/01-organizadora-end-to-end-piloto-festa-de-trindade/01-08-notifications-PLAN.md
