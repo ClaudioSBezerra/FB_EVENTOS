@@ -13,7 +13,7 @@
 //   - `ALTER TABLE <name> FORCE ROW LEVEL SECURITY` in 0002_force_rls.sql
 // See RESEARCH Pattern 1 for the canonical shape.
 
-import { index, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, index, jsonb, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 export const tenants = pgTable(
   'tenants',
@@ -31,6 +31,19 @@ export const tenants = pgTable(
     platformCommissionPct: numeric('platform_commission_pct', { precision: 5, scale: 4 })
       .notNull()
       .default('0.0500'),
+    /**
+     * When true, vendor signups are auto-approved without organizadora review.
+     * Default false (Phase 2, Plan 02-01 — D-23 escape hatch).
+     * Managed via tenant settings UI (Phase 3+).
+     */
+    vendorAutoApprove: boolean('vendor_auto_approve').notNull().default(false),
+    /**
+     * Tenant-specific refund policy overriding the platform default.
+     * Null means use DEFAULT_POLICY from src/lib/refund/policy.ts.
+     * Structure: { tiers: [{ daysBeforeEvent: number, pct: number }] }
+     * (Phase 2, Plan 02-01 — D-07 escape hatch).
+     */
+    refundPolicyJson: jsonb('refund_policy_json'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     // LGPD-05 soft-delete column (Plan 05 wires query helpers and the
     // anonymize-after-retention Graphile-Worker job).
