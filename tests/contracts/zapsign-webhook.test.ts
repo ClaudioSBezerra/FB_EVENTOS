@@ -14,10 +14,10 @@
 //   6. ZapSign API re-fetch fails (5xx) → handler returns 400 (so ZapSign
 //      retries) and contracts.status is NOT updated.
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { http, HttpResponse } from 'msw'
 import { run } from 'graphile-worker'
+import { HttpResponse, http } from 'msw'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { POST as zapsignWebhookPost } from '@/app/api/webhooks/zapsign/route'
 import { pool } from '@/db'
@@ -28,20 +28,13 @@ import {
   EMAIL_STATUS_UPDATE_TASK,
   ZAPSIGN_SEND_CONTRACT_TASK,
 } from '@/jobs/tasks/zapsign-send-contract'
-import {
-  getTenantBucket,
-  resetMinIOClient,
-  setMinIOClientForTests,
-} from '@/lib/storage/minio'
-import {
-  ZAPSIGN_CREATE_DOC_RESPONSE,
-  setupExternalMocks,
-} from '@/test/external-mocks'
+import { getTenantBucket, resetMinIOClient, setMinIOClientForTests } from '@/lib/storage/minio'
 import { appPool, createTenant, insertOrganization, insertUser, migratorPool } from '@/test/db'
+import { setupExternalMocks, ZAPSIGN_CREATE_DOC_RESPONSE } from '@/test/external-mocks'
 import { makeContract } from '@/test/factories/contract-factory'
 import { makeEvent } from '@/test/factories/event-factory'
-import { makeLot } from '@/test/factories/lot-factory'
 import { makeLotCategory } from '@/test/factories/lot-category-factory'
+import { makeLot } from '@/test/factories/lot-factory'
 import { makeVendor } from '@/test/factories/vendor-factory'
 import { getMockMinIO, resetMockMinIO } from '@/test/minio-test'
 
@@ -116,9 +109,12 @@ interface FixtureCtx {
   userId: string
 }
 
-async function setupFixture(prefix: string, opts?: {
-  contractStatus?: string
-}): Promise<FixtureCtx> {
+async function setupFixture(
+  prefix: string,
+  opts?: {
+    contractStatus?: string
+  },
+): Promise<FixtureCtx> {
   const stamp = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
   const tenantId = await createTenant(stamp, `Test Tenant ${prefix}`)
   const userId = await insertUser(`u-${stamp}@example.test`, `User ${prefix}`)
@@ -151,10 +147,7 @@ async function setupFixture(prefix: string, opts?: {
   }
 }
 
-function buildRequest(opts: {
-  body: unknown
-  auth?: string | null
-}): Request {
+function buildRequest(opts: { body: unknown; auth?: string | null }): Request {
   const headers = new Headers()
   if (opts.auth !== null) {
     headers.set('authorization', opts.auth ?? BASIC)
@@ -361,8 +354,9 @@ describe('ZapSign webhook handler — FSM transitions', () => {
           { status: 200 },
         ),
       ),
-      http.get(signedUrl, () =>
-        new HttpResponse(Buffer.from('%PDF-1.7\nsecond delivery'), { status: 200 }),
+      http.get(
+        signedUrl,
+        () => new HttpResponse(Buffer.from('%PDF-1.7\nsecond delivery'), { status: 200 }),
       ),
     )
 
@@ -402,8 +396,9 @@ describe('ZapSign webhook handler — FSM transitions', () => {
   test('ZapSign API re-fetch fails (5xx) → 400 (ZapSign retries) + contract status unchanged', async () => {
     const fx = await setupFixture('wh-refetch-fail', { contractStatus: 'awaiting_org' })
     mocks.use(
-      http.get(`https://sandbox.api.zapsign.com.br/api/v1/docs/${fx.zapsignId}/`, () =>
-        new HttpResponse('upstream timeout', { status: 503 }),
+      http.get(
+        `https://sandbox.api.zapsign.com.br/api/v1/docs/${fx.zapsignId}/`,
+        () => new HttpResponse('upstream timeout', { status: 503 }),
       ),
     )
 

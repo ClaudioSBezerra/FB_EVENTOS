@@ -12,35 +12,28 @@
 //   5. RLS-no-worker proof: a task body that omits withTenant() observes
 //      0 rows for the contract (mirrors Plan 0-06 pattern).
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { run, type Task } from 'graphile-worker'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { generateContractPdf, UnknownTemplateVersionError } from '@/contracts/generate-pdf'
-import {
-  FORNECEDOR_STAND_V1_VERSION,
-  type FornecedorStandV1Params,
-} from '@/contracts/templates'
+import { FORNECEDOR_STAND_V1_VERSION, type FornecedorStandV1Params } from '@/contracts/templates'
 import { pool } from '@/db'
 import { contracts } from '@/db/schema/contracts'
 import { withTenant } from '@/db/with-tenant'
-import {
-  pdfGenerateContract,
-  PDF_GENERATE_CONTRACT_TASK,
-  ZAPSIGN_SEND_CONTRACT_TASK,
-} from '@/jobs/tasks/pdf-generate-contract'
 import { enqueueJob } from '@/jobs/enqueue'
 import {
-  resetMinIOClient,
-  setMinIOClientForTests,
-  getTenantBucket,
-} from '@/lib/storage/minio'
+  PDF_GENERATE_CONTRACT_TASK,
+  pdfGenerateContract,
+  ZAPSIGN_SEND_CONTRACT_TASK,
+} from '@/jobs/tasks/pdf-generate-contract'
+import { getTenantBucket, resetMinIOClient, setMinIOClientForTests } from '@/lib/storage/minio'
 import { appPool, createTenant, insertOrganization, insertUser, migratorPool } from '@/test/db'
-import { makeEvent } from '@/test/factories/event-factory'
-import { makeLot } from '@/test/factories/lot-factory'
-import { makeLotCategory } from '@/test/factories/lot-category-factory'
-import { makeVendor } from '@/test/factories/vendor-factory'
 import { makeContract } from '@/test/factories/contract-factory'
+import { makeEvent } from '@/test/factories/event-factory'
+import { makeLotCategory } from '@/test/factories/lot-category-factory'
+import { makeLot } from '@/test/factories/lot-factory'
+import { makeVendor } from '@/test/factories/vendor-factory'
 import { getMockMinIO, resetMockMinIO } from '@/test/minio-test'
 
 // ────────────────────────────────────────────────────────────────────────────

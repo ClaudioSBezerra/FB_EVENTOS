@@ -16,23 +16,20 @@
 //   6. PAGARME_SECRET_KEY missing → PagarmeNotConfiguredError surfaces
 //      cleanly; Pagar.me is never called.
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { http, HttpResponse } from 'msw'
+import { HttpResponse, http } from 'msw'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { pool } from '@/db'
 import { pagarmeOrders, payments } from '@/db/schema/payments'
 import { withTenant } from '@/db/with-tenant'
 import { createChargeInTenant } from '@/lib/actions/payments'
-import {
-  PAGARME_PIX_ORDER_RESPONSE,
-  setupExternalMocks,
-} from '@/test/external-mocks'
 import { appPool, createTenant, insertOrganization, insertUser, migratorPool } from '@/test/db'
+import { PAGARME_PIX_ORDER_RESPONSE, setupExternalMocks } from '@/test/external-mocks'
 import { makeContract } from '@/test/factories/contract-factory'
 import { makeEvent } from '@/test/factories/event-factory'
-import { makeLot } from '@/test/factories/lot-factory'
 import { makeLotCategory } from '@/test/factories/lot-category-factory'
+import { makeLot } from '@/test/factories/lot-factory'
 import { makeVendor } from '@/test/factories/vendor-factory'
 
 const mocks = setupExternalMocks()
@@ -122,10 +119,7 @@ describe('createCharge — happy path', () => {
 
     // pagarme_orders row stores idempotency_key + both payloads.
     const orderRows = await withTenant(fx.tenantId, async (db) => {
-      return db
-        .select()
-        .from(pagarmeOrders)
-        .where(eq(pagarmeOrders.paymentId, result.payment.id))
+      return db.select().from(pagarmeOrders).where(eq(pagarmeOrders.paymentId, result.payment.id))
     })
     expect(orderRows).toHaveLength(1)
     expect(orderRows[0]?.idempotencyKey).toMatch(/^payment-/)
@@ -245,8 +239,9 @@ describe('createCharge — Pagar.me API failure', () => {
     const fx = await setupSignedContract('api-5xx')
 
     mocks.use(
-      http.post('https://api.pagar.me/core/v5/orders', () =>
-        new HttpResponse('upstream timeout', { status: 503 }),
+      http.post(
+        'https://api.pagar.me/core/v5/orders',
+        () => new HttpResponse('upstream timeout', { status: 503 }),
       ),
     )
 

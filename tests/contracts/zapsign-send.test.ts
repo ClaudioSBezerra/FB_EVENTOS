@@ -15,33 +15,30 @@
 //   6. emitContract Server Action helper inserts contracts row +
 //      enqueues pdf.generate-contract job (chain entry point).
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { http, HttpResponse } from 'msw'
 import { run } from 'graphile-worker'
+import { HttpResponse, http } from 'msw'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { pool } from '@/db'
 import { contracts, zapsignDocuments } from '@/db/schema/contracts'
 import { withTenant } from '@/db/with-tenant'
+import { PDF_GENERATE_CONTRACT_TASK } from '@/jobs/tasks/pdf-generate-contract'
+import {
+  EMAIL_STATUS_UPDATE_TASK,
+  ZAPSIGN_SEND_CONTRACT_TASK,
+  zapsignSendContract,
+} from '@/jobs/tasks/zapsign-send-contract'
 import { emitContractInTenant } from '@/lib/actions/contracts'
 import { assignLotToVendorInTenant } from '@/lib/actions/lot-assignments'
-import {
-  zapsignSendContract,
-  ZAPSIGN_SEND_CONTRACT_TASK,
-  EMAIL_STATUS_UPDATE_TASK,
-} from '@/jobs/tasks/zapsign-send-contract'
-import { PDF_GENERATE_CONTRACT_TASK } from '@/jobs/tasks/pdf-generate-contract'
-import { setupExternalMocks, ZAPSIGN_CREATE_DOC_RESPONSE } from '@/test/external-mocks'
-import {
-  resetMinIOClient,
-  setMinIOClientForTests,
-} from '@/lib/storage/minio'
+import { resetMinIOClient, setMinIOClientForTests } from '@/lib/storage/minio'
 import { appPool, createTenant, insertOrganization, insertUser, migratorPool } from '@/test/db'
-import { makeEvent } from '@/test/factories/event-factory'
-import { makeLot } from '@/test/factories/lot-factory'
-import { makeLotCategory } from '@/test/factories/lot-category-factory'
-import { makeVendor } from '@/test/factories/vendor-factory'
+import { setupExternalMocks, ZAPSIGN_CREATE_DOC_RESPONSE } from '@/test/external-mocks'
 import { makeContract } from '@/test/factories/contract-factory'
+import { makeEvent } from '@/test/factories/event-factory'
+import { makeLotCategory } from '@/test/factories/lot-category-factory'
+import { makeLot } from '@/test/factories/lot-factory'
+import { makeVendor } from '@/test/factories/vendor-factory'
 import { getMockMinIO, resetMockMinIO } from '@/test/minio-test'
 
 const mocks = setupExternalMocks()
@@ -366,21 +363,11 @@ describe('emitContract Server Action helper', () => {
     const vendor = await makeVendor(tenantId, { status: 'approved' })
 
     const assignment = await withTenant(tenantId, async (db) =>
-      assignLotToVendorInTenant(
-        db,
-        tenantId,
-        { lotId: lot.id, vendorId: vendor.id },
-        userId,
-      ),
+      assignLotToVendorInTenant(db, tenantId, { lotId: lot.id, vendorId: vendor.id }, userId),
     )
 
     const contract = await withTenant(tenantId, async (db) =>
-      emitContractInTenant(
-        db,
-        tenantId,
-        { lotAssignmentId: assignment.id },
-        userId,
-      ),
+      emitContractInTenant(db, tenantId, { lotAssignmentId: assignment.id }, userId),
     )
     expect(contract.status).toBe('draft')
     expect(contract.templateVersion).toBe('fornecedor-stand-v1')

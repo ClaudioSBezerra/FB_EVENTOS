@@ -10,8 +10,8 @@
 //      right event payload (signup / aprovacao / rejecao).
 //   6. RLS: tenant B cannot approve tenant A's vendor.
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { run } from 'graphile-worker'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { pool } from '@/db'
 import { withTenant } from '@/db/with-tenant'
@@ -69,12 +69,7 @@ describe('vendor approval FSM — happy paths (Plan 01-04 Task 2)', () => {
     const vendor = await makeVendor(tenantAId, { status: 'pending' })
 
     const approved = await withTenant(tenantAId, async (db) =>
-      approveVendorInTenant(
-        db,
-        tenantAId,
-        { vendorId: vendor.id, action: 'approve' },
-        userId,
-      ),
+      approveVendorInTenant(db, tenantAId, { vendorId: vendor.id, action: 'approve' }, userId),
     )
     expect(approved.status).toBe('approved')
 
@@ -145,12 +140,7 @@ describe('vendor approval FSM — guards (Plan 01-04 Task 2)', () => {
 
     await expect(
       withTenant(tenantAId, async (db) =>
-        approveVendorInTenant(
-          db,
-          tenantAId,
-          { vendorId: vendor.id, action: 'approve' },
-          userId,
-        ),
+        approveVendorInTenant(db, tenantAId, { vendorId: vendor.id, action: 'approve' }, userId),
       ),
     ).rejects.toThrow(/(já está|requer status "pending")/i)
   })
@@ -186,12 +176,7 @@ describe('vendor approval FSM — guards (Plan 01-04 Task 2)', () => {
 
     await expect(
       withTenant(tenantBId, async (db) =>
-        approveVendorInTenant(
-          db,
-          tenantBId,
-          { vendorId: vendorA.id, action: 'approve' },
-          userId,
-        ),
+        approveVendorInTenant(db, tenantBId, { vendorId: vendorA.id, action: 'approve' }, userId),
       ),
     ).rejects.toThrow(/não encontrado|inacessível/i)
 

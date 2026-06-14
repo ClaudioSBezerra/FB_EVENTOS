@@ -16,9 +16,9 @@
 // inconsistent payload shapes and fail at runtime — this test pins the
 // shape now so 01-08 ships confidently.
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { run } from 'graphile-worker'
 import { HttpResponse, http } from 'msw'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { pool } from '@/db'
 import { withTenant } from '@/db/with-tenant'
@@ -29,8 +29,8 @@ import {
   rejectVendorInTenant,
 } from '@/lib/actions/fornecedores'
 import { appPool, createTenant, insertUser, migratorPool } from '@/test/db'
-import { makeVendor } from '@/test/factories/vendor-factory'
 import { setupExternalMocks } from '@/test/external-mocks'
+import { makeVendor } from '@/test/factories/vendor-factory'
 
 const mocks = setupExternalMocks()
 
@@ -74,9 +74,10 @@ afterAll(async () => {
   await pool.end({ timeout: 5 })
 })
 
-async function readJobs(filter: { vendorId: string; event: string }): Promise<
-  Array<{ payload: Record<string, unknown> }>
-> {
+async function readJobs(filter: {
+  vendorId: string
+  event: string
+}): Promise<Array<{ payload: Record<string, unknown> }>> {
   return migratorPool<Array<{ payload: Record<string, unknown> }>>`
     SELECT j.payload
     FROM graphile_worker._private_jobs j
@@ -139,12 +140,7 @@ describe('vendor notifications — enqueue contract (Plan 01-04 Task 3 stub for 
     })
 
     await withTenant(tenantAId, async (db) =>
-      approveVendorInTenant(
-        db,
-        tenantAId,
-        { vendorId: vendor.id, action: 'approve' },
-        userId,
-      ),
+      approveVendorInTenant(db, tenantAId, { vendorId: vendor.id, action: 'approve' }, userId),
     )
 
     const jobs = await readJobs({ vendorId: vendor.id, event: 'aprovacao_fornecedor' })
@@ -190,12 +186,7 @@ describe('vendor notifications — enqueue contract (Plan 01-04 Task 3 stub for 
       status: 'pending',
     })
     await withTenant(tenantAId, async (db) =>
-      approveVendorInTenant(
-        db,
-        tenantAId,
-        { vendorId: vendor.id, action: 'approve' },
-        userId,
-      ),
+      approveVendorInTenant(db, tenantAId, { vendorId: vendor.id, action: 'approve' }, userId),
     )
 
     // Inspect every email job enqueued for this vendor — all share the

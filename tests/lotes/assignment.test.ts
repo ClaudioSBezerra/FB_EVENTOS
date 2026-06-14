@@ -46,7 +46,12 @@ const SQUARE_10x10 = {
 let lotSeq = 0
 const mkCode = () => `L-${++lotSeq}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
-async function makeLotForTenant(tenantId: string, eventId: string, categoryId: string, code?: string) {
+async function makeLotForTenant(
+  tenantId: string,
+  eventId: string,
+  categoryId: string,
+  code?: string,
+) {
   return withTenant(tenantId, async (db) =>
     createLotInTenant(
       db,
@@ -119,12 +124,7 @@ describe('lot_assignments — approved vendor flow', () => {
     const lot = await makeLotForTenant(tenantAId, eventAId, categoryAId)
 
     const assignment = await withTenant(tenantAId, async (db) =>
-      assignLotToVendorInTenant(
-        db,
-        tenantAId,
-        { lotId: lot.id, vendorId: vendor.id },
-        userId,
-      ),
+      assignLotToVendorInTenant(db, tenantAId, { lotId: lot.id, vendorId: vendor.id }, userId),
     )
 
     expect(assignment.lotId).toBe(lot.id)
@@ -176,12 +176,7 @@ describe('lot_assignments — guards', () => {
 
     await expect(
       withTenant(tenantAId, async (db) =>
-        assignLotToVendorInTenant(
-          db,
-          tenantAId,
-          { lotId: lot.id, vendorId: vendor.id },
-          userId,
-        ),
+        assignLotToVendorInTenant(db, tenantAId, { lotId: lot.id, vendorId: vendor.id }, userId),
       ),
     ).rejects.toThrow(/aprovado/i)
 
@@ -201,12 +196,7 @@ describe('lot_assignments — guards', () => {
 
     await expect(
       withTenant(tenantAId, async (db) =>
-        assignLotToVendorInTenant(
-          db,
-          tenantAId,
-          { lotId: lot.id, vendorId: vendor.id },
-          userId,
-        ),
+        assignLotToVendorInTenant(db, tenantAId, { lotId: lot.id, vendorId: vendor.id }, userId),
       ),
     ).rejects.toThrow(/aprovado/i)
   })
@@ -222,28 +212,18 @@ describe('lot_assignments — guards', () => {
 
     await expect(
       withTenant(tenantAId, async (db) =>
-        assignLotToVendorInTenant(
-          db,
-          tenantAId,
-          { lotId: lot.id, vendorId: vendor2.id },
-          userId,
-        ),
+        assignLotToVendorInTenant(db, tenantAId, { lotId: lot.id, vendorId: vendor2.id }, userId),
       ),
     ).rejects.toThrow(/já está atribuído/i)
   })
 
-  test('tenant B cannot assign tenant A\'s lot (RLS lot lookup → 0 rows)', async () => {
+  test("tenant B cannot assign tenant A's lot (RLS lot lookup → 0 rows)", async () => {
     const vendorB = await makeVendor(tenantBId, { status: 'approved' })
     const lotA = await makeLotForTenant(tenantAId, eventAId, categoryAId)
 
     await expect(
       withTenant(tenantBId, async (db) =>
-        assignLotToVendorInTenant(
-          db,
-          tenantBId,
-          { lotId: lotA.id, vendorId: vendorB.id },
-          userId,
-        ),
+        assignLotToVendorInTenant(db, tenantBId, { lotId: lotA.id, vendorId: vendorB.id }, userId),
       ),
     ).rejects.toThrow(/(vendor|lote|fornecedor).*(não encontrado|inacessível)/i)
 
