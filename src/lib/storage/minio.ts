@@ -58,6 +58,7 @@ export interface MinIOClientLike {
     lastModified: Date
     etag: string
   }>
+  removeObject(bucket: string, key: string): Promise<void>
   makeBucket(bucket: string, region?: string): Promise<void>
   bucketExists(bucket: string): Promise<boolean>
 }

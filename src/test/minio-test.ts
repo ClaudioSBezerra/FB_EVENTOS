@@ -60,6 +60,7 @@ export interface MockMinIOClient {
     metaData?: Record<string, string>,
   ): Promise<{ etag: string; versionId: string | null }>
   statObject(bucket: string, key: string): Promise<StatObjectResult>
+  removeObject(bucket: string, key: string): Promise<void>
   makeBucket(bucket: string): Promise<void>
   bucketExists(bucket: string): Promise<boolean>
 
@@ -135,6 +136,10 @@ class InMemoryMinIO implements MockMinIOClient {
       lastModified: obj.lastModified,
       etag,
     }
+  }
+
+  async removeObject(bucket: string, key: string): Promise<void> {
+    this.buckets.get(bucket)?.delete(key)
   }
 
   __debug_listBucket(bucket: string): Array<{ key: string; size: number; contentType: string }> {
