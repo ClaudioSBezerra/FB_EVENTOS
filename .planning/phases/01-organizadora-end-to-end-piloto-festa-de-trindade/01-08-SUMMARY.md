@@ -159,9 +159,20 @@ E2E suite parseable + spec collection passes. **Browser install fails on ubuntu2
 
 ## Deviations from Plan
 
-None — plan executed as written.
+**1. Email transport: Resend → SMTP+nodemailer (D-14 gate user decision).**
 
-The `entity_id` audit_log field uses `payload.vendor_id ?? payload.contract_id ?? payload.payment_id` because audit_log.entity_id is a nullable single UUID — the multi-ref fallback chains through whichever id is present per event. (Documented in handler header.)
+At the D-14 gate, the operator rejected the planned Resend transport with "Não vamos usar o resend. Vamos usar a estrutura própria de envio de e-mails." After confirming the target was SMTP (Hostinger/postfix-class), the orchestrator made the swap inline:
+
+- `src/lib/email.ts`: dropped `import { Resend } from 'resend'`; removed `sendViaResend`; consolidated all transports on nodemailer SMTP (`sendViaSmtp`). Production now requires `SMTP_HOST`; dev defaults to `localhost:1025` (mailpit); test stays in-memory. The 6 templates + `email.send-status-update` task unchanged (transport-agnostic).
+- `src/lib/env.ts`: replaced `RESEND_API_KEY` with `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_SECURE` / `SMTP_FROM`. Coercion via Zod `.coerce.number()` for port and string→bool transform for SMTP_SECURE.
+- `.env.example` + `.env.production.example`: removed Resend block; documented SMTP block with port 587 STARTTLS default + Hostinger placeholder.
+- `package.json`: `pnpm remove resend` (one dep dropped, nothing else used it).
+- `docs/RUNBOOK.md`: rewrote D-14 Step 1 ("Verify Resend production API key") → "Verify SMTP production credentials" with SPF/DKIM/DMARC DNS sanity. Replaced `{{RESEND_API_KEY}}` in the Operator Substitution Table with `{{SMTP_HOST}}` + `{{SMTP_USER}}` + `{{SMTP_PASS}}`.
+- `src/test/external-mocks.ts`: Resend MSW handler left in place as **dead code** (no live caller). Custos asymmetric — kept to avoid noisy diff; flagged here for future cleanup if anyone touches the file.
+
+All 181 tests still green after the swap. tsc + lint + check:all all green.
+
+**2.** The `entity_id` audit_log field uses `payload.vendor_id ?? payload.contract_id ?? payload.payment_id` because audit_log.entity_id is a nullable single UUID — the multi-ref fallback chains through whichever id is present per event. (Documented in handler header.)
 
 ## CHECKPOINT — D-14 Gate (autonomous=false)
 
@@ -180,11 +191,15 @@ PAGARME_ENV=sandbox             → PAGARME_ENV=production
 PAGARME_SECRET_KEY=sk_test_xxx  → PAGARME_SECRET_KEY={{prod}}
 ZAPSIGN_ENV=sandbox             → ZAPSIGN_ENV=production
 ZAPSIGN_TOKEN={{sandbox}}       → ZAPSIGN_TOKEN={{prod}}
-RESEND_API_KEY={{dev}}          → RESEND_API_KEY={{prod}}
+SMTP_HOST=localhost (mailpit)   → SMTP_HOST={{prod-smtp}}
+SMTP_USER=                      → SMTP_USER={{prod-user}}
+SMTP_PASS=                      → SMTP_PASS={{prod-pass}}
+SMTP_PORT=1025                  → SMTP_PORT=587 (STARTTLS) or 465 (TLS)
+SMTP_SECURE=false               → SMTP_SECURE per chosen port
 ```
 
 **Operator action items** (per `docs/RUNBOOK.md` § Phase 1 — D-14 Gate Sandbox→Production Flip):
-1. Verify Resend production API key in Coolify env
+1. Verify SMTP production credentials in Coolify env (DNS sanity: SPF + DKIM + DMARC for eventos.fbtax.cloud)
 2. Flip `PAGARME_ENV=production` + production `PAGARME_SECRET_KEY` in Coolify
 3. Flip `ZAPSIGN_ENV=production` + production `ZAPSIGN_TOKEN` in Coolify
 4. Restart staging container; confirm `/api/health` returns OK

@@ -16,9 +16,15 @@
  * Required at migration time only:
  *   - DATABASE_MIGRATOR_URL        — fb_eventos_migrator role (Plan 03)
  *
- * Required in production (Resend email transport):
- *   - RESEND_API_KEY               — in dev/test this is optional;
- *                                    email-lib falls back to nodemailer + mailpit
+ * Required in production (SMTP transport — Phase 1 D-14 gate decision
+ * swapped Resend for SMTP+nodemailer; "estrutura própria de envio"):
+ *   - SMTP_HOST                    — operator-managed SMTP server (Hostinger,
+ *                                    postfix, etc). In dev/test optional;
+ *                                    email-lib defaults to localhost:1025 (mailpit).
+ *   - SMTP_PORT                    — usually 587 (STARTTLS) or 465 (TLS); dev default 1025
+ *   - SMTP_USER + SMTP_PASS        — auth creds; omit for unauthenticated mailpit dev
+ *   - SMTP_SECURE                  — true for port 465 TLS, false for 587 STARTTLS
+ *   - SMTP_FROM                    — default From address (e.g. no-reply@eventos.fbtax.cloud)
  *
  * Required at build/runtime with sensible defaults:
  *   - LOG_LEVEL                    — pino enum, default 'info'
@@ -49,12 +55,21 @@ const envSchema = z.object({
     ),
   BETTER_AUTH_URL: z.url('BETTER_AUTH_URL must be a valid URL'),
 
-  // Email (Plan 04) — optional in env validation; production deployments
-  // MUST set RESEND_API_KEY via Coolify env, and src/lib/email.ts throws at
-  // send time if it's missing in NODE_ENV=production. Keeping the schema
-  // optional avoids breaking `next build` (which runs with NODE_ENV=production
-  // but cannot see runtime secrets at compile time).
-  RESEND_API_KEY: z.string().optional(),
+  // Email transport — SMTP via nodemailer (Phase 0 Plan 04 + Phase 1 Plan
+  // 01-08 D-14 gate swap from Resend to SMTP). All optional in the schema
+  // because dev defaults to localhost:1025 (mailpit), and `next build`
+  // runs with NODE_ENV=production but cannot see runtime secrets. The
+  // wrapper in src/lib/email.ts throws at send time if SMTP_HOST is missing
+  // in NODE_ENV=production.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .transform((v) => (v == null ? undefined : v.toLowerCase() === 'true')),
+  SMTP_FROM: z.string().optional(),
 
   // Object Storage (Phase 1)
   MINIO_ENDPOINT: z.string().optional(),

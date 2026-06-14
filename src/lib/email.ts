@@ -1,15 +1,19 @@
-// FB_EVENTOS — Transactional email wrapper (Phase 0, Plan 04).
+// FB_EVENTOS — Transactional email wrapper (Phase 0 Plan 04; Phase 1 Plan
+// 01-08 D-14 gate decision swapped Resend for SMTP + nodemailer per
+// user-locked decision at the gate — "estrutura própria de envio de
+// e-mails", see RUNBOOK § Phase 1 — D-14 Gate).
 //
-// In production: uses Resend (env.RESEND_API_KEY) for transactional emails.
-// In dev/test: posts via SMTP to mailpit (localhost:1025) so verification
-// and password-reset links land in the mailpit UI (http://localhost:8025).
-// In test (NODE_ENV='test'), a tiny in-memory transport accumulates emails
-// for assertion by integration tests (see __emails for read-back).
+// In production: SMTP via nodemailer (host/port/user/pass from env). The
+// operator points SMTP_HOST at their managed SMTP server (Hostinger /
+// postfix / etc).
+// In dev (NODE_ENV=development): SMTP via nodemailer pointing at mailpit
+// (host: localhost, port: 1025, no auth) so verification + reset links
+// land in the mailpit UI at http://localhost:8025.
+// In test (NODE_ENV=test): tiny in-memory transport accumulates emails
+// for assertion (see `__emails` for read-back).
 //
-// This module is intentionally minimal — Plan 06 will swap a richer
-// implementation with retry/queue via Graphile-Worker.
+// nodemailer is the single dependency. NO Resend, NO HTTP API — pure SMTP.
 
-import { Resend } from 'resend'
 import { env } from './env'
 
 export interface EmailMessage {
@@ -21,36 +25,33 @@ export interface EmailMessage {
   from?: string
 }
 
-// In-memory capture for tests (cleared between tests via reset()).
+// In-memory capture for tests (cleared between tests via __emails.reset()).
 const inMemoryEmails: EmailMessage[] = []
 
-const DEFAULT_FROM = 'FB_EVENTOS <no-reply@fb-eventos.local>'
+const DEFAULT_FROM = 'FB_EVENTOS <no-reply@eventos.fbtax.cloud>'
 
-async function sendViaResend(msg: EmailMessage): Promise<void> {
-  if (!env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY missing — required for production email send.')
-  }
-  const resend = new Resend(env.RESEND_API_KEY)
-  await resend.emails.send({
-    from: msg.from ?? DEFAULT_FROM,
-    to: msg.to,
-    subject: msg.subject,
-    html: msg.html,
-    ...(msg.text ? { text: msg.text } : {}),
-  })
+interface SmtpOpts {
+  host: string
+  port: number
+  secure: boolean
+  user?: string
+  pass?: string
+  ignoreTLS?: boolean
 }
 
-async function sendViaMailpit(msg: EmailMessage): Promise<void> {
-  // nodemailer is loaded only in dev/test paths to keep prod cold-start small.
+async function sendViaSmtp(msg: EmailMessage, opts: SmtpOpts): Promise<void> {
+  // nodemailer is loaded lazily to keep cold-start lean in environments that
+  // never actually send (e.g. NODE_ENV=test → memory transport).
   const nodemailer = await import('nodemailer')
   const transport = nodemailer.createTransport({
-    host: 'localhost',
-    port: 1025,
-    secure: false,
-    ignoreTLS: true,
+    host: opts.host,
+    port: opts.port,
+    secure: opts.secure,
+    ...(opts.ignoreTLS ? { ignoreTLS: true } : {}),
+    ...(opts.user && opts.pass ? { auth: { user: opts.user, pass: opts.pass } } : {}),
   })
   await transport.sendMail({
-    from: msg.from ?? DEFAULT_FROM,
+    from: msg.from ?? env.SMTP_FROM ?? DEFAULT_FROM,
     to: msg.to,
     subject: msg.subject,
     html: msg.html,
@@ -67,17 +68,36 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
     sendViaMemory(msg)
     return
   }
-  if (env.NODE_ENV === 'production' && env.RESEND_API_KEY) {
-    await sendViaResend(msg)
+
+  if (env.NODE_ENV === 'production') {
+    if (!env.SMTP_HOST) {
+      throw new Error('SMTP_HOST missing — required for production email send.')
+    }
+    await sendViaSmtp(msg, {
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT ?? 587,
+      secure: env.SMTP_SECURE ?? true,
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASS,
+    })
     return
   }
-  // dev fallback: mailpit. Gracefully degrade to memory if mailpit not up.
+
+  // dev fallback: mailpit at localhost:1025 by default, or operator-supplied
+  // SMTP creds if present. Gracefully degrade to memory if SMTP not up.
   try {
-    await sendViaMailpit(msg)
+    await sendViaSmtp(msg, {
+      host: env.SMTP_HOST ?? 'localhost',
+      port: env.SMTP_PORT ?? 1025,
+      secure: env.SMTP_SECURE ?? false,
+      ignoreTLS: true,
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASS,
+    })
   } catch (err) {
-    // Don't crash dev login flow if mailpit isn't running.
+    // Don't crash dev login flow if SMTP isn't running.
     // eslint-disable-next-line no-console
-    console.warn('[email] mailpit unreachable; capturing in-memory:', (err as Error).message)
+    console.warn('[email] SMTP unreachable; capturing in-memory:', (err as Error).message)
     sendViaMemory(msg)
   }
 }

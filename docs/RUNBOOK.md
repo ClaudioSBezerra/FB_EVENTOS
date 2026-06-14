@@ -29,7 +29,8 @@ Coolify env UI before triggering the first deploy:
 | `{{DB_APP_PASSWORD}}`        | `fb_eventos_app` role password                      | `scripts/db/setup-roles.sh` output (Coolify vault)                |
 | `{{DB_MIGRATOR_PASSWORD}}`   | `fb_eventos_migrator` role password                 | `scripts/db/setup-roles.sh` output (Coolify vault)                |
 | `{{BETTER_AUTH_SECRET}}`     | 32-byte random secret for session signing           | `openssl rand -hex 32` (one-time, store in Coolify vault)         |
-| `{{RESEND_API_KEY}}`         | Resend API key                                      | Resend dashboard → API Keys                                       |
+| `{{SMTP_HOST}}`              | SMTP server hostname                                | Hostinger / managed SMTP service                                  |
+| `{{SMTP_USER}}` `{{SMTP_PASS}}` | SMTP auth creds                                  | Same provider as SMTP_HOST                                         |
 | `{{SENTRY_DSN}}`             | Sentry server-side DSN                              | Sentry → Project Settings → Client Keys (DSN)                     |
 | `{{SENTRY_AUTH_TOKEN}}`      | Sentry source-map upload token                      | Sentry → Settings → Auth Tokens (`project:releases` scope)        |
 | `{{MINIO_ACCESS_KEY}}`       | MinIO service account access key                    | MinIO Console → Identity → Service Accounts                       |
@@ -351,12 +352,22 @@ Before invoking this checklist, BOTH must be true:
 > **CRITICAL:** Each step changes a real production credential. Run them
 > in order. Stop at the first failure and execute the **Rollback** below.
 
-1. **Verify Resend production API key**
-   - Coolify dashboard → `fb-eventos-web` → Environment → confirm
-     `RESEND_API_KEY` is the **production** key from
-     https://resend.com/api-keys (not the dev sandbox key).
-   - Send a test email via Resend dashboard "Send test" feature to
-     yourself; confirm delivery within 30 seconds.
+1. **Verify SMTP production credentials** (D-14 gate swap: Resend → SMTP
+   per CONTEXT D-15 update; "estrutura própria de envio de e-mails")
+   - Coolify dashboard → `fb-eventos-web` → Environment → confirm:
+     ```
+     SMTP_HOST=<operator-managed SMTP server, e.g. smtp.hostinger.com>
+     SMTP_PORT=587   (STARTTLS) — or 465 with SMTP_SECURE=true
+     SMTP_USER=<auth user>
+     SMTP_PASS=<auth pass>
+     SMTP_FROM="FB_EVENTOS <no-reply@eventos.fbtax.cloud>"
+     SMTP_SECURE=false   (for 587 STARTTLS)
+     ```
+   - DNS sanity: confirm SPF + DKIM + DMARC records on `eventos.fbtax.cloud`
+     for the SMTP provider you chose (Hostinger publishes the exact records
+     in their email control panel).
+   - Test send: `curl` the staging container to trigger any email send and
+     confirm delivery to operator inbox within 30 seconds.
 
 2. **Flip Pagar.me to production**
    - Coolify env edits:
@@ -394,8 +405,8 @@ Before invoking this checklist, BOTH must be true:
      dashboard within 5 minutes.
    - Confirm the `payments` row in the production DB transitions
      `pending → paid` with `paid_at` populated.
-   - Confirm the `pagamento_recebido` Resend email lands in the operator
-     inbox.
+   - Confirm the `pagamento_recebido` email lands in the operator inbox
+     (delivered via the SMTP server configured in step 1).
 
 6. **Audit-log the flip (LGPD-04)**
    - Manually INSERT an `audit_log` row tagged with the operator's
