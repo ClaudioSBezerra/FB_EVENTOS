@@ -7,6 +7,7 @@
 
 export * from './audit'
 export * from './auth'
+export * from './cnpj-cache'
 export * from './consent'
 export * from './contracts'
 export * from './events'

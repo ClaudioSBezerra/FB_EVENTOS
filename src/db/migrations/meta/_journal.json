@@ -85,6 +85,13 @@
       "when": 1781382661119,
       "tag": "0011_phase1_force_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781382761119,
+      "tag": "0012_cnpj_lookup_cache",
+      "breakpoints": true
     }
   ]
 }
