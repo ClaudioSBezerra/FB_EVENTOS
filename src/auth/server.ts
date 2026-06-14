@@ -40,6 +40,7 @@ import {
   user,
   verification,
 } from '@/db/schema/auth'
+import { makeSessionUpdateBeforeHook } from '@/lib/auth/set-active-org'
 import { sendEmail } from '@/lib/email'
 import { env } from '@/lib/env'
 
@@ -109,6 +110,26 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
+  },
+
+  // Phase 1, Plan 01-01 Task 3 — session.tenant_id wiring.
+  //
+  // Better Auth's organization plugin calls `updateSession(token,
+  // { activeOrganizationId })` whenever the user picks (or auto-picks,
+  // on create) an active organization. The hook below extends the
+  // patch with the matching `tenantId` so the session row's
+  // `tenant_id` stays in sync with `active_organization_id`. Downstream
+  // `withTenant()` callers derive their tenant context from
+  // session.tenant_id — without this hook, the tenant_id stays NULL
+  // forever and every RLS-scoped query returns 0 rows.
+  //
+  // See src/lib/auth/set-active-org.ts for the lookup implementation.
+  databaseHooks: {
+    session: {
+      update: {
+        before: makeSessionUpdateBeforeHook(),
+      },
+    },
   },
 
   // LGPD-01: consent additionalFields on the `user` table.

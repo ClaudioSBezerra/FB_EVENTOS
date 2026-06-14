@@ -71,6 +71,20 @@
       "when": 1781273600000,
       "tag": "0009_graphile_worker_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781382561119,
+      "tag": "0010_phase1_domain_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781382661119,
+      "tag": "0011_phase1_force_rls",
+      "breakpoints": true
     }
   ]
 }

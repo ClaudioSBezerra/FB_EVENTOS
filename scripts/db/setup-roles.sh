@@ -50,6 +50,19 @@ DO $$ BEGIN
     CREATE ROLE fb_eventos_migrator NOLOGIN NOSUPERUSER CREATEDB;
   END IF;
 
+  -- Phase 1, Plan 01-01: system-reader role for SECURITY DEFINER lookup
+  -- functions (e.g. fb_lookup_tenant_for_org used by Better Auth's
+  -- session.update.before hook). NOLOGIN — no human/app authenticates
+  -- as it. BYPASSRLS — required so SECURITY DEFINER functions OWNED by
+  -- this role can read RLS-FORCED tables when no tenant context is set.
+  -- The runtime fb_eventos_app role keeps its NOBYPASSRLS attribute;
+  -- only EXECUTE on specific, narrowly-scoped functions is granted to
+  -- the app. See src/db/migrations/0011_phase1_force_rls.sql.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fb_eventos_sysreader') THEN
+    CREATE ROLE fb_eventos_sysreader NOLOGIN NOINHERIT NOSUPERUSER
+      NOCREATEDB NOCREATEROLE BYPASSRLS;
+  END IF;
+
   -- App login user (group member of fb_eventos_app).
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fb_app_user') THEN
     CREATE USER fb_app_user WITH PASSWORD 'fb_app_dev_pw' IN ROLE fb_eventos_app;
@@ -68,6 +81,13 @@ GRANT ALL ON DATABASE fb_eventos_dev TO fb_migrator;
 -- Allow the migrator role to use the public schema (Postgres 15+ requires
 -- explicit USAGE+CREATE on public schema for non-owner roles).
 GRANT USAGE, CREATE ON SCHEMA public TO fb_eventos_migrator;
+
+-- Make fb_eventos_migrator a member of fb_eventos_sysreader so it can
+-- ALTER FUNCTION ... OWNER TO fb_eventos_sysreader in migration 0011
+-- (PostgreSQL requires the role doing the ALTER to be a member of the
+-- target ownership role). This is the ONLY membership grant — the app
+-- role NEVER becomes a member of sysreader.
+GRANT fb_eventos_sysreader TO fb_eventos_migrator;
 SQL
 
 echo "[setup-roles] OK — fb_eventos_app + fb_eventos_migrator + login users ready"
