@@ -38,6 +38,15 @@ Habilitar o **Fornecedor** a comprar um espaço de evento ponta-a-ponta **sem in
 <decisions>
 ## Implementation Decisions
 
+### Post-Research Amendments (2026-06-14, supersede original D-XX where flagged)
+
+Researcher findings (committed `7366856` in `02-RESEARCH.md`) contradicted four CONTEXT.md claims against verified Pagar.me v5 docs + graphile-worker docs + Postgres docs. The user resolved the boleto path; the remaining three are mechanical corrections the planner applies.
+
+- **AM-01 supersedes D-02 + D-04 + D-05 (boleto):** Phase 2 ships **PIX + cartão only**. Boleto is **deferred to Phase 3** (proper Multimeios design with two-charge or Bolepix dashboard verification). D-05 TTL simplifies to: PIX/cartão = 15 min hard, single rule. Refund mechanics matrix (D-08) drops boleto rows. Marketplace checkout UI shows 2 method tiles, not 3. Reasoning: Pagar.me v5 Multimeios doc does not support boleto+PIX hybrid in one charge; PIX is one-shot + instant compensation and already covers the "pay quickly" UX boleto+PIX was meant to deliver.
+- **AM-02 supersedes D-13 (HMAC header):** Header name + algorithm are **probe-verified at execute-time** (mirror of Phase 0 Plan 06 add_job signature probe). Planner emits a probe-test task BEFORE writing the webhook handler: hit Pagar.me sandbox with a known payload + valid signature, capture the actual header name (`X-Hub-Signature` vs `X-ME-WEBHOOK-SIGNATURE` vs other) + encoding (hex vs base64). Probe-test outcome is pinned into the handler. Belt-and-suspenders re-fetch defense from Phase 1 stays in addition to HMAC. Secret env name `PAGARME_WEBHOOK_SIGNING_SECRET` confirmed.
+- **AM-03 supersedes D-17 (outbox drain cadence):** Graphile-Worker crontab minimum is **1 minute**, not 5s (verified at worker.graphile.org/docs/cron). New design: outbox handlers that need fast UX (lot.status_changed for SSE) bypass the drain entirely — they `pg_notify` directly from the same transaction that inserts the outbox row, via a same-tx inline call. Background side-effects (email, PDF, payment.paid → lot.sold marking) drain @ 1 min. Idempotency unchanged: handlers check state before mutating.
+- **AM-04 supersedes D-08 (refund endpoint):** Pagar.me v5 refund/cancel surface is `DELETE /core/v5/charges/{id}` with optional `{ amount }` body for partial refunds — NOT `POST /charges/{id}/refunds` or `POST /charges/{id}/cancel`. Planner uses the verified shape; per-method matrix becomes: PIX → DELETE with amount (one-shot); Cartão authorize (not captured) → DELETE without amount (cancel); Cartão captured → DELETE with amount (partial refund per policy tier). Boleto rows removed per AM-01.
+
 ### Cart + Add-ons (FORN-08)
 - **D-01:** **Add-ons como produtos separados** com tabela `event_addons` (FK event_id + name + price_brl_cents + max_qty + active). Organizadora define add-ons no painel admin (`Energia R$200`, `Água R$80`, `Lixo R$100`, `Mesa R$50`); fornecedor seleciona via checkbox no checkout. Carrinho = 1 lote + N add-ons. Charge total = lot price (D-09 aditivo de Phase 1) + sum(add-ons). Cada add-on selecionado vira linha em `cart_addon_lines` ligada ao `cart_id` da reserva ativa.
 
