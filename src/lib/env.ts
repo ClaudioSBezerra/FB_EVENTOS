@@ -79,6 +79,20 @@ const envSchema = z.object({
   ZAPSIGN_WEBHOOK_USER: z.string().optional(),
   ZAPSIGN_WEBHOOK_PASS: z.string().optional(),
 
+  // Pagar.me v5 (Phase 1, Plan 01-06)
+  // Secret key — sk_test_* for sandbox, sk_* for production. Selects the
+  // environment (Pagar.me uses ONE base URL `https://api.pagar.me/core/v5`
+  // for both — the key prefix is the env switch).
+  PAGARME_SECRET_KEY: z.string().optional(),
+  // Diagnostic-only — does NOT change the API URL. Use to assert in logs
+  // / health checks that the operator deployed the correct key.
+  PAGARME_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  // Basic Auth credentials configured in the Pagar.me dashboard when
+  // registering the webhook URL. Webhook URL (production):
+  // https://eventos.fbtax.cloud/api/webhooks/pagarme
+  PAGARME_WEBHOOK_USER: z.string().optional(),
+  PAGARME_WEBHOOK_PASS: z.string().optional(),
+
   // App
   NEXT_PUBLIC_APP_URL: z.url('NEXT_PUBLIC_APP_URL must be a valid URL'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
