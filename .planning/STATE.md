@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: CHECKPOINT REACHED — autonomous=false; operator must approve env flip per docs/RUNBOOK.md § Phase 1 — D-14 Gate
+status: planning
 stopped_at: Phase 2 context gathered (24 decisions); ready for plan-phase
 last_updated: "2026-06-14T19:24:10.516Z"
 last_activity: 2026-06-14
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-11)
 
 **Core value:** Habilitar a organizadora a vender espaços de eventos a fornecedores de forma self-service, com planta visual e pagamento integrado — sem precisar de WhatsApp/Excel/contratos em papel.
-**Current focus:** Phase 01 — Organizadora End-to-End (Piloto Festa de Trindade)
+**Current focus:** Phase 02 — Fornecedor Self-Service + Checkout PIX/Cartão (context gathered, ready for plan-phase)
 
 ## Current Position
 
-Phase: 01 (Organizadora End-to-End (Piloto Festa de Trindade)) — D-14 GATE CHECKPOINT
-Plan: 8 of 8 (structural deliverable COMPLETE; awaiting operator-approved sandbox→production flip)
-Status: CHECKPOINT REACHED — autonomous=false; operator must approve env flip per docs/RUNBOOK.md § Phase 1 — D-14 Gate
-Last activity: 2026-06-14
+Phase: 02 (Fornecedor Self-Service + Checkout PIX/Cartão) — context gathered
+Plan: 0 of TBD (run /gsd-plan-phase 2 to generate plans from CONTEXT + RESEARCH)
+Status: planning — Phase 1 closed 2026-06-14 (8/8 plans, D-14 gate operator-approved with Resend→SMTP swap); Phase 2 ready
+Last activity: 2026-06-14 -- Phase 2 context committed
 
 Progress: [██████████] 100% (structural)
 
