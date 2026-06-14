@@ -9,9 +9,15 @@
 // contract tests + Plan 04's auth tests.
 
 import path from 'node:path'
+import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // Phase 1, Plan 01-05: Adds @vitejs/plugin-react so .tsx templates used
+  // server-side by @react-pdf/renderer (src/contracts/templates/*.tsx)
+  // transform under Vitest. Without this plugin Vitest can't parse JSX
+  // because tsconfig.json sets `"jsx": "preserve"` for Next.js's compiler.
+  plugins: [react()],
   test: {
     environment: 'node',
     globals: true,

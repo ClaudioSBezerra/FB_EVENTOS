@@ -1,14 +1,16 @@
-// FB_EVENTOS — Lot factory (Phase 1, Plan 01-01 — Wave 0 test infra).
+// FB_EVENTOS — Lot factory (Phase 1, Plan 01-01 — Wave 0 test infra;
+// adjusted Plan 01-05 to use appPool + SET LOCAL — FORCE RLS on lots
+// blocks migratorPool writes).
 //
 // Builds a `lots` row with default polygon2d geometry and computed area
-// (10,000 m² = 100x100 square by default). Uses the migratorPool.
+// (10,000 m² = 100x100 square by default).
 //
 // REFERENCES:
 //   - 01-RESEARCH.md §A1 (lots schema + geometry shape)
 //   - D-10: jsonb geometry shape — `{"version":1,"type":"polygon2d", ...}`
-//   - src/test/db.ts (migratorPool pattern)
+//   - src/test/factories/lot-category-factory.ts (sibling pattern)
 
-import { migratorPool } from '@/test/db'
+import { appPool } from '@/test/db'
 
 export type Polygon2DGeometry = {
   version: 1
@@ -68,28 +70,31 @@ export async function makeLot(
     status: overrides.status ?? 'available',
   }
 
-  const rows = await migratorPool<
-    Array<{
-      id: string
-      tenant_id: string
-      event_id: string
-      category_id: string
-      code: string
-      area_m2: string
-      geometry: Polygon2DGeometry
-      status: string
-    }>
-  >`
-    INSERT INTO lots (
-      tenant_id, event_id, category_id, code, area_m2, geometry, status
-    ) VALUES (
-      ${tenantId}, ${eventId}, ${categoryId}, ${defaults.code},
-      ${defaults.areaM2}, ${JSON.stringify(defaults.geometry)}::jsonb,
-      ${defaults.status}
-    )
-    RETURNING id, tenant_id, event_id, category_id, code, area_m2,
-              geometry, status
-  `
+  const rows = await appPool.begin(async (tx) => {
+    await tx`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`
+    return tx<
+      Array<{
+        id: string
+        tenant_id: string
+        event_id: string
+        category_id: string
+        code: string
+        area_m2: string
+        geometry: Polygon2DGeometry
+        status: string
+      }>
+    >`
+      INSERT INTO lots (
+        tenant_id, event_id, category_id, code, area_m2, geometry, status
+      ) VALUES (
+        ${tenantId}, ${eventId}, ${categoryId}, ${defaults.code},
+        ${defaults.areaM2}, ${JSON.stringify(defaults.geometry)}::jsonb,
+        ${defaults.status}
+      )
+      RETURNING id, tenant_id, event_id, category_id, code, area_m2,
+                geometry, status
+    `
+  })
 
   if (!rows[0]) throw new Error('makeLot: no row returned')
   const r = rows[0]

@@ -1,18 +1,18 @@
-// FB_EVENTOS — Event factory (Phase 1, Plan 01-01 — Wave 0 test infra).
+// FB_EVENTOS — Event factory (Phase 1, Plan 01-01 — Wave 0 test infra;
+// adjusted Plan 01-05 to use appPool + SET LOCAL because events carries
+// FORCE RLS and the migratorPool was getting default-deny on INSERT
+// — same pattern fix applied earlier to vendor-factory + lot-category-factory).
 //
-// Builds an `events` row with sane defaults and INSERTs via the migratorPool
-// (bypasses FORCE RLS on writes for fast test setup — production code paths
-// use appPool inside withTenant to exercise the RLS contract).
-//
-// The factory inserts via raw SQL so it doesn't depend on the Drizzle schema
-// barrel at import time (test files can import this factory before the
-// schema for the table they're testing is even compiled).
+// Builds an `events` row with sane defaults. Uses appPool wrapped in a
+// SET LOCAL transaction so the FORCE-RLS policy lets the INSERT through
+// (the production path goes through withTenant which does the same).
 //
 // REFERENCES:
 //   - 01-RESEARCH.md §A1 (events schema)
-//   - src/test/db.ts (the migratorPool pattern)
+//   - src/test/db.ts (appPool + SET LOCAL pattern via insertOrganization)
+//   - src/test/factories/lot-category-factory.ts (sibling pattern)
 
-import { migratorPool } from '@/test/db'
+import { appPool } from '@/test/db'
 
 export interface EventOverrides {
   name?: string
@@ -65,35 +65,38 @@ export async function makeEvent(
     plantaMinioKey: overrides.plantaMinioKey ?? null,
   }
 
-  const rows = await migratorPool<
-    Array<{
-      id: string
-      tenant_id: string
-      name: string
-      starts_at: Date
-      ends_at: Date
-      place_name: string
-      place_address: string | null
-      capacity: number | null
-      timezone: string
-      currency: string
-      status: string
-      planta_minio_key: string | null
-    }>
-  >`
-    INSERT INTO events (
-      tenant_id, name, starts_at, ends_at, place_name, place_address,
-      capacity, timezone, currency, status, planta_minio_key
-    ) VALUES (
-      ${tenantId}, ${defaults.name}, ${defaults.startsAt}, ${defaults.endsAt},
-      ${defaults.placeName}, ${defaults.placeAddress}, ${defaults.capacity},
-      ${defaults.timezone}, ${defaults.currency}, ${defaults.status},
-      ${defaults.plantaMinioKey}
-    )
-    RETURNING id, tenant_id, name, starts_at, ends_at, place_name,
-              place_address, capacity, timezone, currency, status,
-              planta_minio_key
-  `
+  const rows = await appPool.begin(async (tx) => {
+    await tx`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`
+    return tx<
+      Array<{
+        id: string
+        tenant_id: string
+        name: string
+        starts_at: Date
+        ends_at: Date
+        place_name: string
+        place_address: string | null
+        capacity: number | null
+        timezone: string
+        currency: string
+        status: string
+        planta_minio_key: string | null
+      }>
+    >`
+      INSERT INTO events (
+        tenant_id, name, starts_at, ends_at, place_name, place_address,
+        capacity, timezone, currency, status, planta_minio_key
+      ) VALUES (
+        ${tenantId}, ${defaults.name}, ${defaults.startsAt}, ${defaults.endsAt},
+        ${defaults.placeName}, ${defaults.placeAddress}, ${defaults.capacity},
+        ${defaults.timezone}, ${defaults.currency}, ${defaults.status},
+        ${defaults.plantaMinioKey}
+      )
+      RETURNING id, tenant_id, name, starts_at, ends_at, place_name,
+                place_address, capacity, timezone, currency, status,
+                planta_minio_key
+    `
+  })
 
   if (!rows[0]) throw new Error('makeEvent: no row returned')
   const r = rows[0]

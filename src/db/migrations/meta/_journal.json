@@ -92,6 +92,13 @@
       "when": 1781382761119,
       "tag": "0012_cnpj_lookup_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781382861119,
+      "tag": "0013_contract_templates_seed",
+      "breakpoints": true
     }
   ]
 }

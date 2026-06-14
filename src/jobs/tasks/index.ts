@@ -8,7 +8,9 @@
 import type { TaskList } from 'graphile-worker'
 
 import { echo } from './echo'
+import { PDF_GENERATE_CONTRACT_TASK, pdfGenerateContract } from './pdf-generate-contract'
 
 export const taskList: TaskList = {
   echo,
+  [PDF_GENERATE_CONTRACT_TASK]: pdfGenerateContract,
 }
