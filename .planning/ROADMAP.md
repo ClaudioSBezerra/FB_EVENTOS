@@ -53,7 +53,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Organizadora e fornecedor recebem email Resend em cada mudança de status (cadastro, aprovação, contrato emitido) — ≥1 lote real do piloto Trindade é vendido via FB_EVENTOS sem voltar a Excel/WhatsApp
 **Plans**: 8 plans
 - [x] 01-01-PLAN.md — Test infra Wave 0 + MinIO infra + domain schema bootstrap (12 tables FORCE RLS + PII comments + setActiveOrg hook)
-- [ ] 01-02-PLAN.md — Event CRUD + planta upload (pre-signed PUT direto browser→MinIO; statObject verification)
+- [x] 01-02-PLAN.md — Event CRUD + planta upload (pre-signed PUT direto browser→MinIO; statObject verification)
 - [ ] 01-03-PLAN.md — Konva editor + lots (polygon2d v1 jsonb) + categories (aditivo pricing) + lot assignment + ADR-0003
 - [ ] 01-04-PLAN.md — Fornecedor CRUD + approval FSM + BrasilAPI CNPJ (2-layer + degrade-with-warning + 7d cache) + vendor doc cofre
 - [ ] 01-05-PLAN.md — Contracts + @react-pdf templates + ZapSign sequential signers + webhook re-fetch defense + ADR-0002 + ADR-0004
@@ -112,7 +112,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 7/7 | Complete   | 2026-06-12 |
-| 1. Organizadora End-to-End (Piloto Festa de Trindade) | 1/8 | In Progress|  |
+| 1. Organizadora End-to-End (Piloto Festa de Trindade) | 2/8 | In Progress|  |
 | 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/TBD | Not started | - |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
 | 4. Público — Ticketing, F&B, Marketplace, Integrações | 0/TBD | Not started | - |
