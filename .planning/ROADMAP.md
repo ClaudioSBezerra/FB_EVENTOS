@@ -72,8 +72,41 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Dois fornecedores clicando o mesmo lote simultaneamente: apenas um obtém reserva (TTL 15min em `lot_reservations`); o outro recebe 409 imediato — verificado por load test concorrente, pois `pg_try_advisory_xact_lock(hashtext('lot:'||event_id||':'||lot_id))` está ativo na transação de reserva
   3. Checkout Pagar.me v5 aceita PIX (QR + copia-e-cola) e cartão; webhook handler verifica HMAC, grava em `payment_webhooks_inbox` com PK no `gateway_event_id` + `ON CONFLICT DO NOTHING`, retorna 200 rápido e enfileira processamento via Graphile-Worker — entrega duplicada do gateway é no-op verificada por teste
   4. Outbox pattern grava `payment.paid` business event + jobs (email confirmação, geração de PDF de contrato, marcação do lote como `sold`) na mesma transação; SAGA de cancelamento libera reserva quando pagamento falha; Graphile-Worker scheduled job expira reservas a cada 1 minuto; lista de espera notifica candidatos quando lote vendido é liberado
-  5. Portal do fornecedor mostra histórico de compras, contratos baixáveis, segunda via de boleto, upload de docs adicionais, refund/estorno (PIX one-shot vs cartão authorize+capture) e consent granular LGPD (marketing/analytics/dados de pagamento) por fornecedor
-**Plans**: TBD
+  5. Portal do fornecedor mostra histórico de compras, contratos baixáveis, upload de docs adicionais, refund/estorno (PIX one-shot vs cartão authorize+capture) e consent granular LGPD (marketing/analytics/dados de pagamento) por fornecedor — *segunda via de boleto deferida para Phase 3 por AM-05 (Phase 2 ship PIX + cartão only per AM-01)*
+**Plans**: 8 plans
+
+**Wave 1**
+- [ ] 02-01-PLAN.md — Wave 0 test infra + 8 new Drizzle schemas + Migrations 0017-0020 [BLOCKING db:generate + db:migrate]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 02-02-PLAN.md — Fornecedor signup-by-slug + marketplace event discovery (FORN-01, FORN-02)
+
+**Wave 3** *(blocked on Wave 2)*
+- [ ] 02-03-PLAN.md — Lot reservation + Konva mode='buyer' + advisory lock + reservation.expire @1min (FORN-03..06, 13)
+
+**Wave 4** *(blocked on Wave 3)*
+- [ ] 02-04-PLAN.md — SSE Route Handler + lot.notify-channel via LISTEN/NOTIFY (FORN-07)
+
+**Wave 5** *(blocked on Wave 3)*
+- [ ] 02-05-PLAN.md — Cart + add-ons + Pagar.me PIX/cartão checkout + HMAC + installments-shape probe + inbox handler (FORN-08..12) [CHECKPOINT: AM-02 + AM-06 probes]
+
+**Wave 6** *(blocked on Waves 3 + 4 + 5)*
+- [ ] 02-06-PLAN.md — outbox.drain @1min + 4 handlers + SAGA cancel + ADR-0006 (FORN-14)
+
+**Wave 7** *(blocked on Waves 1 + 3 + 5 + 6)*
+- [ ] 02-07-PLAN.md — jose JWT [CHECKPOINT: pinned version] + waitlist + refund DELETE + ADR-0007 (FORN-15, FORN-16)
+
+**Wave 8** *(blocked on Waves 2 + 5 + 6 + 7)*
+- [ ] 02-08-PLAN.md — Vendor portal + LGPD consent + Phase 2 D-14 gate [CHECKPOINT: operator-approved production flip] (FORN-17, FORN-18)
+
+**Cross-cutting constraints** *(must_haves shared across 2+ plans):*
+- Postgres `pg_try_advisory_xact_lock(hashtext('lot:'||event_id||':'||lot_id))` is the canonical advisory-lock key (02-03 reserveLot, 02-06 payment.paid handler, 02-07 consumeWaitlistToken + refund-process)
+- `withTenant(payload.tenant_id, ...)` mandatory in every Graphile-Worker task (Pitfall 8; 02-03, 02-05, 02-06, 02-07)
+- Belt-and-suspenders re-fetch defense from Phase 1 webhook stays IN ADDITION to AM-02 HMAC verify (02-05)
+- `outbox_events` payload carries IDs only, never PII; handlers re-fetch under withTenant (02-05, 02-06, 02-07)
+- CANONICAL_DOMAIN=`https://eventos.fbtax.cloud` in every user-facing URL emitted by email templates + JWT links (02-07, 02-08; Phase 1 D-14 pinning preserved)
+- `pnpm db:generate && pnpm db:migrate` for ALL schema changes — `drizzle-kit push` BANNED by CI (02-01 [BLOCKING], 02-07 Migration 0021)
+
 **UI hint**: yes
 
 ### Phase 3: Prestador + Comissionamento + Assinatura Recorrente
@@ -113,7 +146,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 7/7 | Complete   | 2026-06-12 |
 | 1. Organizadora End-to-End (Piloto Festa de Trindade) | 8/8 | Complete   | 2026-06-14 |
-| 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/TBD | Not started | - |
+| 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/8 | Planned (ready to execute) | - |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
 | 4. Público — Ticketing, F&B, Marketplace, Integrações | 0/TBD | Not started | - |
 

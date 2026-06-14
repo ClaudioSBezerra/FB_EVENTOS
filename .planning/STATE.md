@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 2 context gathered (24 decisions); ready for plan-phase
-last_updated: "2026-06-14T19:24:10.516Z"
-last_activity: 2026-06-14
+status: executing
+stopped_at: Phase 02 planned (8 plans, FORN-01..FORN-18 covered); ready to execute
+last_updated: "2026-06-14T23:21:22.119Z"
+last_activity: 2026-06-14 -- Phase 02 planning complete
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 15
+  total_plans: 23
   completed_plans: 15
   percent: 40
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-11)
 
 **Core value:** Habilitar a organizadora a vender espaços de eventos a fornecedores de forma self-service, com planta visual e pagamento integrado — sem precisar de WhatsApp/Excel/contratos em papel.
-**Current focus:** Phase 02 — Fornecedor Self-Service + Checkout PIX/Cartão (context gathered, ready for plan-phase)
+**Current focus:** Phase 02 — Fornecedor Self-Service + Checkout PIX/Cartão (planned, ready to execute — 8/8 plans)
 
 ## Current Position
 
-Phase: 02 (Fornecedor Self-Service + Checkout PIX/Cartão) — context gathered
-Plan: 0 of TBD (run /gsd-plan-phase 2 to generate plans from CONTEXT + RESEARCH)
-Status: planning — Phase 1 closed 2026-06-14 (8/8 plans, D-14 gate operator-approved with Resend→SMTP swap); Phase 2 ready
-Last activity: 2026-06-14 -- Phase 2 context committed
+Phase: 02 (Fornecedor Self-Service + Checkout PIX/Cartão) — planned, ready to execute
+Plan: 0 of 8 (run /gsd-execute-phase 2 to start Wave 1)
+Status: Ready to execute — 02-01..02-08 verified iter 2 PASSED; 6 amendments AM-01..AM-06 thread through plans; 3 CHECKPOINTs gate execution (02-05 HMAC+installments probe; 02-07 jose pinned install; 02-08 production webhook flip)
+Last activity: 2026-06-14 -- Phase 02 planning complete (FORN-01..FORN-18 covered)
 
 Progress: [██████████] 100% (structural)
 
