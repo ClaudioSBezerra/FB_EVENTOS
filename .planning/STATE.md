@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 paused at plan 01-04 Task 1 partial (CNPJ validators + cache schema committed; BrasilAPI action + tests pending)
-last_updated: "2026-06-14T13:17:35.570Z"
+last_updated: "2026-06-14T14:10:26.578Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
   percent: 20
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 01 (Organizadora End-to-End (Piloto Festa de Trindade)) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-06-14
 
-Progress: [███████░░░] 73%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [███████░░░] 73%
 | Phase 01 P01 | 135min | 3 tasks | 28 files |
 | Phase 01 P02 | 55min | 2 tasks | 13 files |
 | Phase 01 P04 | 80 | 3 tasks | 18 files |
+| Phase 01 P05 | 145 | 3 tasks | 35 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01]: Plan 01-04 established 'rawSqlFromTenantDb' pattern (extracts postgres.js TransactionSql from Drizzle TenantDb via session.client) so enqueueJob lands in the same tx as the business UPDATE — outbox pattern over a Drizzle handle; future actions wanting atomic side-effects can reuse this 1-line helper
 - [Phase ?]: [Phase 01]: Plan 01-04 established 'no-RLS on global public-data cache' pattern (cnpj_lookup_cache stores Receita Federal data shared cross-tenant); COMMENT ON TABLE documents the no-RLS decision so future contributors don't 'fix' it
 - [Phase ?]: [Phase 01]: Plan 01-04 established 'audit-on-every-download' pattern for LGPD compliance: mintVendorDocDownloadUrl writes audit_log row BEFORE returning URL — the audit row IS the compliance contract, not the URL itself. Cross-tenant attempts throw BEFORE recordAudit to avoid polluting victim's audit_log
+- [Phase ?]: [Phase 01]: Plan 01-05: Contracts PDF + ZapSign vertical landed — @react-pdf/renderer + sequential signers + belt-and-suspenders webhook defense (Basic Auth + API re-fetch). Two new ADRs (0002 ZapSign over Clicksign; 0004 @react-pdf over Puppeteer). Two-step outbox chain pdf.generate-contract → zapsign.send-contract → email.send-status-update with per-step atomicity. Migration 0014 narrow SELECT-only RLS policy for migrator on zapsign_documents replaces a SECURITY DEFINER approach blocked by PG 18 ALTER FUNCTION OWNER schema-CREATE check. 18 new tests bring suite to 144 GREEN.
 
 ### Pending Todos
 
@@ -110,6 +112,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T13:16:46.145Z
+Last session: 2026-06-14T14:10:05.292Z
 Stopped at: Phase 1 paused at plan 01-04 Task 1 partial (CNPJ validators + cache schema committed; BrasilAPI action + tests pending)
 Resume file: None

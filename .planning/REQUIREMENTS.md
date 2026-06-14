@@ -62,8 +62,8 @@ Requisitos da release inicial. Cada um mapeado para uma fase no roadmap. Organiz
 - [x] **ORG-07**: Lista, busca e detalhe de fornecedores cadastrados (com filtro por status: pendente/aprovado/rejeitado)
 - [x] **ORG-08**: Aprovação/rejeição manual de fornecedor pela organizadora (workflow de status)
 - [ ] **ORG-09**: Atribuição manual de lote para fornecedor aprovado (Phase 1: organizadora aloca; Phase 2: fornecedor escolhe)
-- [ ] **ORG-10**: Geração de contrato digital (PDF) por evento+fornecedor+lote via Graphile-Worker job
-- [ ] **ORG-11**: Integração com provider de e-sign (ZapSign OU Clicksign — decisão em Phase 1) para envio de contrato
+- [x] **ORG-10**: Geração de contrato digital (PDF) por evento+fornecedor+lote via Graphile-Worker job
+- [x] **ORG-11**: Integração com provider de e-sign (ZapSign OU Clicksign — decisão em Phase 1) para envio de contrato
 - [ ] **ORG-12**: Geração de cobrança Pagar.me (cobrança simples PIX/cartão; SEM split ainda — split fica para Phase 2-3)
 - [ ] **ORG-13**: Dashboard de ocupação da planta (% lotes vendidos, em valor R$ e em m²)
 - [ ] **ORG-14**: Dashboard financeiro mínimo (recebido, a receber, comissão da plataforma já calculada)
@@ -248,8 +248,8 @@ Mapeamento de cada requisito v1 para sua fase do roadmap (cada REQ-ID aparece em
 | ORG-07 | Phase 1 | Complete |
 | ORG-08 | Phase 1 | Complete |
 | ORG-09 | Phase 1 | Pending |
-| ORG-10 | Phase 1 | Pending |
-| ORG-11 | Phase 1 | Pending |
+| ORG-10 | Phase 1 | Complete |
+| ORG-11 | Phase 1 | Complete |
 | ORG-12 | Phase 1 | Pending |
 | ORG-13 | Phase 1 | Pending |
 | ORG-14 | Phase 1 | Pending |
