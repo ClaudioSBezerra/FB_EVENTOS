@@ -13,7 +13,7 @@ FB_EVENTOS é entregue em cinco fases sequenciais (Phase 0 → 4) seguindo a dec
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Foundation, Stack Lock & Anti-Pitfall Hardening** - Repo, CI gates, RLS multi-tenant, auth, LGPD baseline, deploy pipeline (completed 2026-06-12)
-- [ ] **Phase 1: Organizadora End-to-End (Piloto Festa de Trindade)** - Evento + planta 2D + lotes + fornecedores + contrato + cobrança manual
+- [x] **Phase 1: Organizadora End-to-End (Piloto Festa de Trindade)** - Evento + planta 2D + lotes + fornecedores + contrato + cobrança manual (completed 2026-06-14)
 - [ ] **Phase 2: Fornecedor Self-Service + Checkout PIX/Cartão** - Portal fornecedor + reserva com TTL + Pagar.me hardened + webhooks idempotentes
 - [ ] **Phase 3: Prestador + Comissionamento + Assinatura Recorrente** - Mão de obra + split Pagar.me + subscription da organizadora + 4 fontes de receita
 - [ ] **Phase 4: Público — Ticketing, F&B, Marketplace, Integrações** - PWA offline check-in + marketplace SSR + Sympla/Eventbrite + LGPD complete + ops hardening
@@ -112,7 +112,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 7/7 | Complete   | 2026-06-12 |
-| 1. Organizadora End-to-End (Piloto Festa de Trindade) | 7/8 | In Progress|  |
+| 1. Organizadora End-to-End (Piloto Festa de Trindade) | 8/8 | Complete   | 2026-06-14 |
 | 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/TBD | Not started | - |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
 | 4. Público — Ticketing, F&B, Marketplace, Integrações | 0/TBD | Not started | - |
