@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 1 COMPLETE 2026-06-14 — D-14 gate operator-approved with Resend→SMTP swap; ready for Phase 2 discuss
-last_updated: "2026-06-14T20:30:00.000Z"
-last_activity: 2026-06-14 -- Phase 1 closed; Phase 2 discuss next
+status: CHECKPOINT REACHED — autonomous=false; operator must approve env flip per docs/RUNBOOK.md § Phase 1 — D-14 Gate
+stopped_at: Phase 2 context gathered (24 decisions); ready for plan-phase
+last_updated: "2026-06-14T19:24:10.516Z"
+last_activity: 2026-06-14
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 15
   completed_plans: 15
-  percent: 25
+  percent: 40
 ---
 
 # Project State
@@ -118,6 +118,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T19:00:00.000Z
-Stopped at: Phase 1 Plan 01-08 — D-14 gate structural deliverable COMPLETE (181/181 tests GREEN, 40 files); CHECKPOINT (autonomous=false) awaiting operator approval to flip sandbox→production env vars per docs/RUNBOOK.md § Phase 1 — D-14 Gate Sandbox→Production Flip
-Resume file: .planning/phases/01-organizadora-end-to-end-piloto-festa-de-trindade/01-08-SUMMARY.md (operator action: run RUNBOOK checklist; then land d14_gate.production_flip audit_log row)
+Last session: 2026-06-14T19:24:10.501Z
+Stopped at: Phase 2 context gathered (24 decisions); ready for plan-phase
+Resume file: .planning/phases/02-fornecedor-self-service-checkout-pix-cartao/02-CONTEXT.md
