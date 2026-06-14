@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-06-13T17:18:48.142Z"
-last_activity: 2026-06-13 -- Phase 01 planning complete
+last_updated: "2026-06-14T00:27:44.682Z"
+last_activity: 2026-06-14
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 7
+  completed_plans: 8
   percent: 20
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-11)
 
 **Core value:** Habilitar a organizadora a vender espaços de eventos a fornecedores de forma self-service, com planta visual e pagamento integrado — sem precisar de WhatsApp/Excel/contratos em papel.
-**Current focus:** Phase 00 — Foundation, Stack Lock & Anti-Pitfall Hardening
+**Current focus:** Phase 01 — Organizadora End-to-End (Piloto Festa de Trindade)
 
 ## Current Position
 
-Phase: 00 (Foundation, Stack Lock & Anti-Pitfall Hardening) — EXECUTING
-Plan: 6 of 7
+Phase: 01 (Organizadora End-to-End (Piloto Festa de Trindade)) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-06-13 -- Phase 01 planning complete
+Last activity: 2026-06-14
 
-Progress: [████████░░] 86%
+Progress: [█████░░░░░] 53%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [████████░░] 86%
 | Phase 00 P03 | 75min | 3 tasks | 24 files |
 | Phase 00 P05 | 45min | 3 tasks | 13 files |
 | Phase 00 P06 | 60min | 3 tasks | 20 files |
+| Phase 01 P01 | 135min | 3 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 00]: Plan 05 established 'PII: COMMENT ON COLUMN' inventory pattern + 'recordAudit(db, opts) singleton-db rejected loudly' pattern — every PII column in Phase 1+ MUST carry a 'PII:' prefixed comment; recordAudit signature stays explicit (no AsyncLocalStorage in Phase 0) so the call site documents which transaction it lands in
 - [Phase 00]: Plan 06: Pino structured logger + Sentry server/client/edge configs with the load-bearing file names (Pitfall 5 mitigated); Graphile-Worker 0.16.6 wired with transactional outbox `enqueueJob(tx, ...)`; add_job SQL signature probed live (RESEARCH A1 mitigated); RLS policies installed on graphile_worker.* tables (Migration 0009, discovered during test development — our NOBYPASSRLS contract would otherwise silently break the worker); `::text::json` double cast in enqueueJob defeats postgres.js's JSON-string parameter encoding; RESEARCH Pitfall 8 (Worker doesn't inherit app.current_tenant_id) now structurally observable via worker-without-with-tenant.test.ts. ADR-0001 ratifies Graphile-Worker over pg-boss with Phase 4 revisit criteria. 59/59 tests GREEN.
 - [Phase 00]: Plan 06 established three patterns: (1) 'Probe test for SQL function signatures' — boot the dependency briefly, read pg_proc, invoke the named-arg form; catches drift BEFORE downstream code depends on it. (2) 'Outbox via enqueueJob(tx, ...)' — Phase 2 Server Actions get atomic business-write + side-effect-enqueue for free. (3) '::text::json double cast' for postgres.js → graphile-worker payload integrity — without it, payloads are stored as JSON strings (json_typeof = 'string') and the task handler receives a string instead of an object.
+- [Phase ?]: [Phase 01]: Plan 01-01: 12 RLS-FORCED domain tables + Wave 0 test infra + setActiveOrganization → session.tenant_id wiring via Better Auth databaseHooks. Pattern: SECURITY DEFINER tenant-context-resolution function owned by NOLOGIN+BYPASSRLS fb_eventos_sysreader role
+- [Phase ?]: [Phase 01]: Plan 01-01 established Wave 0 test pattern — MSW server with happy-path defaults + per-test overrides for ZapSign/Pagar.me/BrasilAPI/Resend, in-memory MockMinIOClient matching minio-js v8 surface, 3 raw-SQL factories bypassing FORCE RLS via migratorPool
 
 ### Pending Todos
 
@@ -101,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-12T17:38:55.782Z
+Last session: 2026-06-14T00:27:44.667Z
 Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-organizadora-end-to-end-piloto-festa-de-trindade/01-CONTEXT.md
+Resume file: None
