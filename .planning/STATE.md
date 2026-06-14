@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 1 at 7/8 plans (01-07 dashboards complete; 169/169 tests GREEN)
-last_updated: "2026-06-14T17:57:22.083Z"
+status: awaiting_operator_checkpoint
+stopped_at: Phase 1 Plan 01-08 — D-14 gate CHECKPOINT (autonomous=false); operator approval required to flip sandbox→production env vars
+last_updated: "2026-06-14T19:00:00.000Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 14
-  percent: 20
+  completed_plans: 15
+  percent: 25
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 01 (Organizadora End-to-End (Piloto Festa de Trindade)) — EXECUTING
-Plan: 8 of 8
-Status: Ready to execute
+Phase: 01 (Organizadora End-to-End (Piloto Festa de Trindade)) — D-14 GATE CHECKPOINT
+Plan: 8 of 8 (structural deliverable COMPLETE; awaiting operator-approved sandbox→production flip)
+Status: CHECKPOINT REACHED — autonomous=false; operator must approve env flip per docs/RUNBOOK.md § Phase 1 — D-14 Gate
 Last activity: 2026-06-14
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100% (structural)
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [█████████░] 93%
 | Phase 01 P04 | 80 | 3 tasks | 18 files |
 | Phase 01 P05 | 145 | 3 tasks | 35 files |
 | Phase 01 P07 | 25 | 2 tasks | 14 files |
+| Phase 01 P08 | 70 | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -96,14 +97,16 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 01]: Plan 01-05: Contracts PDF + ZapSign vertical landed — @react-pdf/renderer + sequential signers + belt-and-suspenders webhook defense (Basic Auth + API re-fetch). Two new ADRs (0002 ZapSign over Clicksign; 0004 @react-pdf over Puppeteer). Two-step outbox chain pdf.generate-contract → zapsign.send-contract → email.send-status-update with per-step atomicity. Migration 0014 narrow SELECT-only RLS policy for migrator on zapsign_documents replaces a SECURITY DEFINER approach blocked by PG 18 ALTER FUNCTION OWNER schema-CREATE check. 18 new tests bring suite to 144 GREEN.
 - [Phase 01]: Plan 01-07: occupancy + financial dashboards landed. Migration 0016 (tenant.platform_commission_pct numeric(5,4) DEFAULT 0.0500); three Server Action helpers (getEventOccupancy, getEventFinancials, getEventLotsForDashboard) following the established pure-helper + thin-action pattern; PlantaEditor extended with mode='dashboard' prop (no Transformer, status-color fill, inline DashboardLotPopover sub-component — no Radix Popover dep, matches minimal-shadcn project style). 12 new tests bring suite to 169 GREEN; ORG-13 + ORG-14 delivered.
 - [Phase 01]: Plan 01-07 established 'inline-popover-over-Radix' pattern (single-purpose absolute-positioned popover lives in the parent client component; avoids a new @radix-ui dep — same approach as Plan 01-03 lot-assignment-dialog) and 'GROUP BY + FILTER + COALESCE single-roundtrip dashboard SQL' pattern + 'getLotColorForStatus single-source-of-truth' for status→color mapping (Phase 2 SSE can reuse without UI duplication)
+- [Phase 01]: Plan 01-08: 6 pt-BR Resend templates + email.send-status-update Graphile-Worker task close ORG-17 + the email leg of the 01-04/01-05/01-06 outbox chain. CANONICAL_DOMAIN='https://eventos.fbtax.cloud' pinned in shared.ts + regex-asserted across all template tests. recordAudit stores SHA-256(email.toLowerCase()) instead of raw email (LGPD-04 forward-compat with Phase 4 anonymization). Walking-skeleton spec extended with D-14 4-step describe.serial gate + tests/e2e/fixtures/d14-gate-fixtures.ts (seedTrindadeTenant, simulate*Webhook helpers, ensureSandboxEnv NEVER flips production). docs/RUNBOOK.md gets 'Phase 1 — D-14 Gate Sandbox→Production Flip' operator section. CHECKPOINT reached — autonomous=false; operator approval required to flip env vars. 12 new Vitest tests bring suite to 181 GREEN (40 files).
+- [Phase 01]: Plan 01-08 established 'CANONICAL_DOMAIN const + regex assertion' pattern (catches stale localhost/vercel.app URLs at test time before they ship to real fornecedor inboxes) + 'recordAudit hashed PII' pattern (SHA-256 email hash in payload; forensic trace via vendor_id/contract_id/payment_id) + 'DB-seed fallback per E2E step' pattern (each D-14 step has both a UI-driven happy path AND a DB-direct fallback so the gate is repeatable even when individual UI sub-flows degrade in CI) + 'ensureSandboxEnv idempotent + production-flip-NEVER-from-fixtures' invariant (defense against accidental prod credential exposure in CI runs)
 
 ### Pending Todos
 
-None yet.
+- D-14 gate operator-approved sandbox→production env flip (PAGARME_ENV, ZAPSIGN_ENV, RESEND_API_KEY) — gated by `docs/RUNBOOK.md` § Phase 1 — D-14 Gate Sandbox→Production Flip checklist. Operator: claudio_bezerra@hotmail.com.
 
 ### Blockers/Concerns
 
-None yet.
+- Phase 1 close awaits operator approval at the D-14 gate (autonomous=false). Until the operator runs the 6-step RUNBOOK checklist + lands the `d14_gate.production_flip` audit_log row, Phase 1 status stays at "structural deliverable complete, awaiting production flip".
 
 ## Deferred Items
 
@@ -115,6 +118,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T17:57:22.067Z
-Stopped at: Phase 1 at 7/8 plans (01-07 dashboards complete; 169/169 tests GREEN)
-Resume file: .planning/phases/01-organizadora-end-to-end-piloto-festa-de-trindade/01-08-notifications-PLAN.md
+Last session: 2026-06-14T19:00:00.000Z
+Stopped at: Phase 1 Plan 01-08 — D-14 gate structural deliverable COMPLETE (181/181 tests GREEN, 40 files); CHECKPOINT (autonomous=false) awaiting operator approval to flip sandbox→production env vars per docs/RUNBOOK.md § Phase 1 — D-14 Gate Sandbox→Production Flip
+Resume file: .planning/phases/01-organizadora-end-to-end-piloto-festa-de-trindade/01-08-SUMMARY.md (operator action: run RUNBOOK checklist; then land d14_gate.production_flip audit_log row)

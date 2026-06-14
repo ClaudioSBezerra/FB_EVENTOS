@@ -59,7 +59,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 01-05-PLAN.md — Contracts + @react-pdf templates + ZapSign sequential signers + webhook re-fetch defense + ADR-0002 + ADR-0004
 - [x] 01-06-PLAN.md — Pagar.me v5 simple charges (PIX + cartão, sem split) + webhook re-fetch defense + idempotency
 - [x] 01-07-PLAN.md — Dashboards ocupação (Konva read-only colorido) + financeiro (recebido / a receber / comissão por fornecedor)
-- [ ] 01-08-PLAN.md — Resend pt-BR templates (6 events) + walking-skeleton D-14 4-step gate extension + RUNBOOK operator flip checklist (checkpoint)
+- [x] 01-08-PLAN.md — Resend pt-BR templates (6 events) + walking-skeleton D-14 4-step gate extension + RUNBOOK operator flip checklist (structural deliverable complete; CHECKPOINT awaiting operator-approved sandbox→production env flip per docs/RUNBOOK.md § Phase 1 — D-14 Gate)
 **UI hint**: yes
 
 ### Phase 2: Fornecedor Self-Service + Checkout PIX/Cartão

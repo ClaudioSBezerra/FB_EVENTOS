@@ -69,7 +69,7 @@ Requisitos da release inicial. Cada um mapeado para uma fase no roadmap. Organiz
 - [x] **ORG-14**: Dashboard financeiro mínimo (recebido, a receber, comissão da plataforma já calculada)
 - [x] **ORG-15**: Cofre de documentos por fornecedor (MinIO + URL assinada com TTL curto)
 - [x] **ORG-16**: Validação de CNPJ via BrasilAPI no cadastro de fornecedor
-- [ ] **ORG-17**: Notificação por email (Resend) para organizadora e fornecedor em mudanças de status (cadastro, aprovação, contrato emitido)
+- [x] **ORG-17**: Notificação por email (Resend) para organizadora e fornecedor em mudanças de status (cadastro, aprovação, contrato emitido)
 
 ### Phase 2 — Persona Fornecedor (Self-service + Checkout PIX/Cartão)
 
@@ -255,7 +255,7 @@ Mapeamento de cada requisito v1 para sua fase do roadmap (cada REQ-ID aparece em
 | ORG-14 | Phase 1 | Complete |
 | ORG-15 | Phase 1 | Complete |
 | ORG-16 | Phase 1 | Complete |
-| ORG-17 | Phase 1 | Pending |
+| ORG-17 | Phase 1 | Complete |
 | FORN-01 | Phase 2 | Pending |
 | FORN-02 | Phase 2 | Pending |
 | FORN-03 | Phase 2 | Pending |
