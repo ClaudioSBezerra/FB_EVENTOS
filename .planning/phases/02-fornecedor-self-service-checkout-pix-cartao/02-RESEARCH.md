@@ -762,14 +762,18 @@ export async function verifyWaitlistToken(token: string): Promise<{
 | A10 | Pagar.me refund endpoint is `DELETE /core/v5/charges/{id}` with optional `amount` body for partial refunds (NOT `POST /charges/{id}/refunds` as D-08 states) | Refund | Verified [CITED: docs.pagar.me/reference/cancelar-cobrança] — actual endpoint shape is DELETE not POST. **Mitigation: update payments.ts to match real endpoint.** |
 | A11 | Pagar.me supports cross-method refund (boleto paid → refund via PIX) | Refund | NOT directly verified in public docs; CONTEXT D-08 claims this. **Mitigation: Test in sandbox; if not supported, refund-via-PIX needs operator to issue bank transfer instead.** |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-### Q1. ⚠️ HIGH PRIORITY — Pagar.me v5 webhook HMAC header name + algorithm
+> **Status (2026-06-14, post-CONTEXT amendments):** All 5 questions resolved via user choice + AM-XX amendments + planned probe-tests at execute-time. Resolution path recorded below each question.
+
+### Q1. ⚠️ HIGH PRIORITY — Pagar.me v5 webhook HMAC header name + algorithm — **(RESOLVED via AM-02)**
+- **Resolution:** Per AM-02 in CONTEXT.md, the HMAC header name + algorithm are probe-verified at execute-time. Plan 02-05 Task 1 is a `checkpoint:human-verify gate="blocking"` that runs a sandbox round-trip with known payload + valid signature, captures the actual `X-*` header name and encoding (hex vs base64), and pins the result into `src/lib/pagarme/hmac-header-name.generated.ts`. Belt-and-suspenders Phase 1 re-fetch defense stays IN ADDITION to HMAC.
 - **What we know:** ME parent platform uses `X-ME-WEBHOOK-SIGNATURE` (HMAC-SHA256 base64). Phase 1 RESEARCH §A8 documented (correctly, at the time) that legacy Pagar.me v5 used Basic Auth only. CONTEXT.md D-13 claims `X-Hub-Signature` SHA-256 — this header name is **not corroborated** by any public Pagar.me v5 documentation I found.
 - **What's unclear:** Is the HMAC actually shipped on legacy `api.pagar.me/core/v5` webhooks? Is the header `X-Hub-Signature`, `X-ME-WEBHOOK-SIGNATURE`, `Webhook-Signature`, or something else? Hex or base64 encoding? Is the signing secret managed in the merchant dashboard or via a separate API call?
 - **Recommendation:** **TRY IN SANDBOX FIRST.** Configure a test webhook in the Pagar.me dashboard, point it to a logging endpoint, post a sample transaction, capture all headers, and document the exact name + algorithm. Alternatively, **ASK USER** to share a screenshot of the Pagar.me dashboard webhook signature configuration UI. Phase 2 plan must include a probe-test task (mirroring Phase 0 Plan 06 add_job signature probe) that asserts the configured header name + format matches what arrives.
 
-### Q2. ⚠️ HIGH PRIORITY — Boleto+PIX hybrid feasibility
+### Q2. ⚠️ HIGH PRIORITY — Boleto+PIX hybrid feasibility — **(RESOLVED via AM-01 + AM-05)**
+- **Resolution:** User chose option (C) at plan-phase time: drop boleto entirely from Phase 2. AM-01 in CONTEXT.md supersedes D-02/D-04/D-05; Phase 2 ships PIX + cartão only. AM-05 additionally narrows FORN-17 portal scope so "segunda via de boleto" UI is also deferred to Phase 3 (no boleto charges exist in Phase 2 → empty view → defer alongside boleto charge creation).
 - **What we know:** Pagar.me Multimeios doc explicitly lists supported combinations: 2x cards OR 1 card + 1 boleto. Boleto+PIX is NOT listed. Boleto endpoint uses `due_at` ISO timestamp, not `expires_in/business_days`. No `pix_qrcode` toggle documented on the boleto.
 - **What's unclear:** Is there an undocumented Pagar.me feature ("BoletoPix" or similar) for PSP-tier merchants? Or is the user's intent "boleto with PIX rendered alongside on a single PDF" which would require either two parallel charges or a third-party PDF compositor?
 - **Recommendation:** **ASK USER** to choose among:
@@ -778,17 +782,20 @@ export async function verifyWaitlistToken(token: string): Promise<{
   - (C) **Drop boleto entirely**, use PIX with 3-day `expires_in: 259200`.
   - (D) **Confirm Pagar.me dashboard has a "Bolepix" toggle** (some PSP integrations of Stone/Pagar.me support this; ASK ACCOUNT MANAGER).
 
-### Q3. ⚠️ MEDIUM — Pagar.me credit_card interest_type semantics
+### Q3. ⚠️ MEDIUM — Pagar.me credit_card interest_type semantics — **(RESOLVED via AM-06)**
+- **Resolution:** Per AM-06 in CONTEXT.md, the `installments` API param + `interest_type` value (`compound` vs `simple` vs absent) are probe-verified at execute-time alongside the AM-02 HMAC probe — single sandbox round-trip pins both. Probe outcome saved into `src/lib/pagarme/installments-shape.generated.ts`. Checkout UI imports this constant; installments table rendered to fornecedor is mathematically correct on first cartão charge.
 - **What we know:** Documented `installments: 1..12` exists. CONTEXT D-03 `interest_type: 'compound'` is plausible but unverified in v5 docs.
 - **What's unclear:** Is interest configured per-request, per-merchant-dashboard, or via the recipient's MDR? Does Pagar.me v5 expose an `installments_table` or similar shape in the response showing the calculated juros for the buyer UI?
 - **Recommendation:** **TRY IN SANDBOX** — create a credit_card charge with various installment values and inspect the response. The Phase 2 checkout UI must show "12x R$ 114" — that requires either the Pagar.me API echoing per-installment amount OR our app computing it from a static rate. Document the verified pattern.
 
-### Q4. MEDIUM — Should `payment.process-webhook` task wrap in withTenant or stay sysreader?
+### Q4. MEDIUM — Should `payment.process-webhook` task wrap in withTenant or stay sysreader? — **(RESOLVED: denormalize tenant_id into inbox row)**
+- **Resolution:** Planner chose denormalization. Plan 02-05 inserts `tenant_id` into `payment_webhooks_inbox` at handler time (resolved via existing `fb_lookup_tenant_for_pagarme_order` sysreader function from Phase 1). Worker task `payment.process-webhook` then reads `tenant_id` from payload and wraps body in `withTenant(payload.tenant_id, ...)` per Pitfall 8. Clean entry; no sysreader inside the worker. This is the planner's recommended pattern (researcher concurred).
 - **What we know:** Phase 1 webhook handler resolves tenant via `migratorPool` then enters `withTenant`. For Phase 2 we move processing to a worker task — same pattern OK, but graphile-worker tasks already need to wrap their body in withTenant per Phase 0 invariant.
 - **What's unclear:** Does the task receive `tenant_id` in payload? Current sketch passes `{inbox_id}` only — that means the task must re-resolve tenant from `payment_webhooks_inbox` via migrator pool (or denormalize tenant_id into the inbox row at INSERT time).
 - **Recommendation:** **Denormalize**: when the webhook handler does the inbox INSERT, also resolve tenant_id via the existing `fb_lookup_tenant_for_pagarme_order` sysreader function and store it in the inbox row. Worker then has `tenant_id` in payload — clean withTenant entry. Planner decision.
 
-### Q5. LOW — Outbox drain cadence in production
+### Q5. LOW — Outbox drain cadence in production — **(RESOLVED via AM-03)**
+- **Resolution:** Per AM-03 in CONTEXT.md, drain cadence is 1 minute (crontab floor); SSE-tier events bypass drain via same-tx pg_notify. Accepted per recommendation below — 1-min latency on email/PDF/billing handlers is acceptable for Phase 2 piloto. Plan 02-06 implements both: drain @ `* * * * *` for outbox.drain + SSE same-tx notify via inline call from outbox emit.
 - **What we know:** D-17 says 5s; graphile-worker crontab min is 1 min.
 - **What's unclear:** Is 1-min latency on email/PDF generation acceptable for Phase 2 piloto?
 - **Recommendation:** Yes — Phase 1 Resend emails arrive in seconds because the JobInsert→worker pickup→render→send chain is sub-second from queue. The 1-min drain pull is only the worst-case "row sits unprocessed before drain finds it"; in practice the drain task often runs within seconds of cron tick if worker is idle. Document as acceptable for Phase 2; Phase 3+ may add NOTIFY-driven instant drain.
