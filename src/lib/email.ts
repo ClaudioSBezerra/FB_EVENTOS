@@ -16,6 +16,8 @@ export interface EmailMessage {
   to: string
   subject: string
   html: string
+  /** Optional plain-text alternative (preferred by some MUAs + accessibility). */
+  text?: string
   from?: string
 }
 
@@ -34,6 +36,7 @@ async function sendViaResend(msg: EmailMessage): Promise<void> {
     to: msg.to,
     subject: msg.subject,
     html: msg.html,
+    ...(msg.text ? { text: msg.text } : {}),
   })
 }
 
@@ -51,6 +54,7 @@ async function sendViaMailpit(msg: EmailMessage): Promise<void> {
     to: msg.to,
     subject: msg.subject,
     html: msg.html,
+    ...(msg.text ? { text: msg.text } : {}),
   })
 }
 

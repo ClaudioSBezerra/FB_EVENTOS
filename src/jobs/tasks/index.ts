@@ -8,6 +8,7 @@
 import type { TaskList } from 'graphile-worker'
 
 import { echo } from './echo'
+import { EMAIL_SEND_STATUS_UPDATE_TASK, emailSendStatusUpdate } from './email-send-status-update'
 import { PDF_GENERATE_CONTRACT_TASK, pdfGenerateContract } from './pdf-generate-contract'
 import { ZAPSIGN_SEND_CONTRACT_TASK, zapsignSendContract } from './zapsign-send-contract'
 
@@ -15,4 +16,5 @@ export const taskList: TaskList = {
   echo,
   [PDF_GENERATE_CONTRACT_TASK]: pdfGenerateContract,
   [ZAPSIGN_SEND_CONTRACT_TASK]: zapsignSendContract,
+  [EMAIL_SEND_STATUS_UPDATE_TASK]: emailSendStatusUpdate,
 }
