@@ -49,6 +49,30 @@ const DEFAULT_STROKE = '#15803d'
 type EditorMode = 'select' | 'draw'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
+/**
+ * Display mode for the planta canvas.
+ *   - 'editor'    — full Konva editor with Transformer, draw/select toolbar,
+ *                   auto-save (Plan 01-03).
+ *   - 'dashboard' — read-only render with lots colored by status, click opens
+ *                   a popover with lot details. No toolbar, no transformer,
+ *                   no drag. (Plan 01-07.)
+ */
+export type PlantaEditorMode = 'editor' | 'dashboard'
+
+/**
+ * Dashboard-mode lot meta consumed by the popover. The fill/stroke hex
+ * comes from src/lib/actions/dashboard.ts getLotColorForStatus().
+ */
+export interface DashboardLotMeta {
+  id: string
+  status: string
+  priceBRL: number
+  categoryName: string
+  vendorLegalName: string | null
+  colorFill: string
+  colorStroke: string
+}
+
 interface LotState {
   id: string
   code: string
@@ -70,6 +94,14 @@ interface PlantaEditorProps {
   plantaContentType: string | null
   initialLots: PersistedLotRow[]
   categories: CategoryOption[]
+  /** Defaults to 'editor'. Set to 'dashboard' for the read-only occupancy view. */
+  mode?: PlantaEditorMode
+  /**
+   * Required when `mode='dashboard'`. Indexed by lot id; the dashboard render
+   * fills/strokes lots using these colors and the popover reads vendor + price
+   * from this map.
+   */
+  dashboardLots?: Record<string, DashboardLotMeta>
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -138,7 +170,10 @@ export function PlantaEditor({
   plantaContentType,
   initialLots,
   categories,
+  mode: displayMode = 'editor',
+  dashboardLots,
 }: PlantaEditorProps) {
+  const isDashboard = displayMode === 'dashboard'
   const [lots, setLots] = useState<LotState[]>(() => initialLots.map(polygonFromRow))
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mode, setMode] = useState<EditorMode>('select')
@@ -148,6 +183,12 @@ export function PlantaEditor({
   const [backgroundImage, setBackgroundImage] = useState<
     HTMLImageElement | HTMLCanvasElement | null
   >(null)
+  // Dashboard-mode popover: tracks the clicked lot + screen-space position.
+  const [popover, setPopover] = useState<{
+    lotId: string
+    x: number
+    y: number
+  } | null>(null)
 
   // Refs the Transformer uses.
   // biome-ignore lint/suspicious/noExplicitAny: Konva node typing is internal
@@ -197,6 +238,7 @@ export function PlantaEditor({
   // ──────────────────────────────────────────────────────────────────────
   // biome-ignore lint/correctness/useExhaustiveDependencies: `lots` is intentional — when the lots list mutates (new polygon created), the Transformer must re-attach to the ref that was just registered.
   useEffect(() => {
+    if (isDashboard) return // No Transformer in read-only dashboard mode.
     const transformer = transformerRef.current
     if (!transformer) return
     if (mode === 'select' && selectedId && lotNodesRef.current[selectedId]) {
@@ -206,7 +248,7 @@ export function PlantaEditor({
       transformer.nodes([])
       transformer.getLayer()?.batchDraw()
     }
-  }, [selectedId, mode, lots])
+  }, [selectedId, mode, lots, isDashboard])
 
   // ──────────────────────────────────────────────────────────────────────
   // Auto-save (per-lot debounce 1000ms)
@@ -419,81 +461,103 @@ export function PlantaEditor({
   // ──────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-3" data-testid="planta-editor">
-      {/* Toolbar */}
-      <div
-        className="flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2"
-        data-testid="planta-toolbar"
-      >
-        <Button
-          type="button"
-          variant={mode === 'select' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => {
-            setMode('select')
-            setDrawPoints([])
-          }}
+    <div className="space-y-3" data-testid="planta-editor" data-mode={displayMode}>
+      {/* Toolbar — editor mode only. Dashboard mode renders a small legend. */}
+      {isDashboard ? (
+        <div
+          className="flex flex-wrap items-center gap-3 rounded-md border bg-slate-50 px-3 py-2 text-xs"
+          data-testid="planta-legend"
         >
-          Selecionar
-        </Button>
-        <Button
-          type="button"
-          variant={mode === 'draw' ? 'default' : 'outline'}
-          size="sm"
-          disabled={!activeCategoryId}
-          onClick={() => {
-            setMode('draw')
-            setSelectedId(null)
-          }}
+          <span className="font-medium text-slate-700">Legenda:</span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-3 w-3 rounded-sm bg-emerald-500" /> Disponível
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-3 w-3 rounded-sm bg-amber-500" /> Reservado
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-3 w-3 rounded-sm bg-red-500" /> Vendido
+          </span>
+          <span className="ml-auto text-slate-500">Clique em um lote para detalhes.</span>
+        </div>
+      ) : (
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2"
+          data-testid="planta-toolbar"
         >
-          Novo polígono
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={!selectedId}
-          onClick={() => {
-            void onDeleteSelected()
-          }}
-        >
-          Excluir
-        </Button>
+          <Button
+            type="button"
+            variant={mode === 'select' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setMode('select')
+              setDrawPoints([])
+            }}
+          >
+            Selecionar
+          </Button>
+          <Button
+            type="button"
+            variant={mode === 'draw' ? 'default' : 'outline'}
+            size="sm"
+            disabled={!activeCategoryId}
+            onClick={() => {
+              setMode('draw')
+              setSelectedId(null)
+            }}
+          >
+            Novo polígono
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!selectedId}
+            onClick={() => {
+              void onDeleteSelected()
+            }}
+          >
+            Excluir
+          </Button>
 
-        {categories.length > 0 && (
-          <label className="ml-2 flex items-center gap-2 text-sm">
-            Categoria:
-            <select
-              className="rounded border px-2 py-1 text-sm"
-              value={activeCategoryId}
-              onChange={(e) => setActiveCategoryId(e.target.value)}
-              data-testid="planta-category-select"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+          {categories.length > 0 && (
+            <label className="ml-2 flex items-center gap-2 text-sm">
+              Categoria:
+              <select
+                className="rounded border px-2 py-1 text-sm"
+                value={activeCategoryId}
+                onChange={(e) => setActiveCategoryId(e.target.value)}
+                data-testid="planta-category-select"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
-        <span
-          className="ml-auto rounded bg-white px-2 py-1 text-xs text-slate-600"
-          data-testid="planta-save-status"
-          data-status={saveStatus}
-        >
-          {statusLabel}
-        </span>
-      </div>
+          <span
+            className="ml-auto rounded bg-white px-2 py-1 text-xs text-slate-600"
+            data-testid="planta-save-status"
+            data-status={saveStatus}
+          >
+            {statusLabel}
+          </span>
+        </div>
+      )}
 
       {/* Canvas */}
-      <div className="overflow-hidden rounded-md border bg-slate-100" data-testid="planta-canvas">
+      <div
+        className="relative overflow-hidden rounded-md border bg-slate-100"
+        data-testid="planta-canvas"
+      >
         <Stage
           width={STAGE_WIDTH}
           height={STAGE_HEIGHT}
-          onClick={onStageClick}
-          onDblClick={onStageDblClick}
+          onClick={isDashboard ? undefined : onStageClick}
+          onDblClick={isDashboard ? undefined : onStageDblClick}
         >
           <Layer>
             {backgroundImage && (
@@ -505,9 +569,24 @@ export function PlantaEditor({
               />
             )}
             {lots.map((lot) => {
-              const cat = categoryById.get(lot.categoryId)
-              const fill = `${cat?.color ?? lot.geometry.fill ?? DEFAULT_FILL}40`
-              const stroke = lot.geometry.stroke ?? DEFAULT_STROKE
+              // Dashboard mode: status colors from dashboardLots map.
+              // Editor mode: category color (Plan 01-03 behavior, unchanged).
+              let fill: string
+              let stroke: string
+              if (isDashboard && dashboardLots?.[lot.id]) {
+                const meta = dashboardLots[lot.id]
+                if (meta) {
+                  fill = `${meta.colorFill}40`
+                  stroke = meta.colorStroke
+                } else {
+                  fill = `${DEFAULT_FILL}40`
+                  stroke = DEFAULT_STROKE
+                }
+              } else {
+                const cat = categoryById.get(lot.categoryId)
+                fill = `${cat?.color ?? lot.geometry.fill ?? DEFAULT_FILL}40`
+                stroke = lot.geometry.stroke ?? DEFAULT_STROKE
+              }
               return (
                 <Line
                   key={lot.id}
@@ -519,18 +598,34 @@ export function PlantaEditor({
                   stroke={stroke}
                   strokeWidth={lot.geometry.stroke_width ?? 2}
                   closed
-                  draggable={mode === 'select'}
-                  onClick={() => {
+                  draggable={!isDashboard && mode === 'select'}
+                  onClick={(e: KonvaEventObject<MouseEvent>) => {
+                    if (isDashboard) {
+                      // Open the dashboard popover near the click point.
+                      // biome-ignore lint/suspicious/noExplicitAny: Konva stage typing
+                      const stage = e.target.getStage?.() as any
+                      const pos = stage?.getPointerPosition?.()
+                      if (pos) setPopover({ lotId: lot.id, x: pos.x, y: pos.y })
+                      return
+                    }
                     if (mode === 'select') setSelectedId(lot.id)
                   }}
-                  onDragEnd={(e: KonvaEventObject<DragEvent>) => onPolygonDragEnd(lot.id, e)}
-                  onTransformEnd={(e: KonvaEventObject<Event>) => onPolygonTransformEnd(lot.id, e)}
+                  onDragEnd={
+                    isDashboard
+                      ? undefined
+                      : (e: KonvaEventObject<DragEvent>) => onPolygonDragEnd(lot.id, e)
+                  }
+                  onTransformEnd={
+                    isDashboard
+                      ? undefined
+                      : (e: KonvaEventObject<Event>) => onPolygonTransformEnd(lot.id, e)
+                  }
                   data-lot-id={lot.id}
                 />
               )
             })}
-            {/* In-progress polygon while in draw mode */}
-            {mode === 'draw' && drawPoints.length > 0 && (
+            {/* In-progress polygon while in draw mode (editor only) */}
+            {!isDashboard && mode === 'draw' && drawPoints.length > 0 && (
               <Line
                 points={flattenPoints(drawPoints)}
                 stroke={DEFAULT_STROKE}
@@ -540,7 +635,7 @@ export function PlantaEditor({
                 listening={false}
               />
             )}
-            {mode === 'select' && (
+            {!isDashboard && mode === 'select' && (
               <Transformer
                 ref={transformerRef}
                 rotateEnabled={false}
@@ -554,20 +649,113 @@ export function PlantaEditor({
             )}
           </Layer>
         </Stage>
+
+        {/* Dashboard popover (absolute over the canvas). Click outside to close. */}
+        {isDashboard && popover && dashboardLots?.[popover.lotId] && (
+          <DashboardLotPopover
+            anchorX={popover.x}
+            anchorY={popover.y}
+            lotCode={lots.find((l) => l.id === popover.lotId)?.code ?? '—'}
+            meta={dashboardLots[popover.lotId]!}
+            onClose={() => setPopover(null)}
+          />
+        )}
       </div>
 
-      {/* Selected lot meta */}
-      {selectedId && (
+      {/* Selected lot meta (editor mode only) */}
+      {!isDashboard && selectedId && (
         <p className="text-xs text-slate-600" data-testid="planta-selected-meta">
           Selecionado: <strong>{lots.find((l) => l.id === selectedId)?.code ?? '—'}</strong>
         </p>
       )}
-      {mode === 'draw' && (
+      {!isDashboard && mode === 'draw' && (
         <p className="text-xs text-slate-600">
           Clique para adicionar vértices ({drawPoints.length} ponto
           {drawPoints.length === 1 ? '' : 's'}); duplo-clique fecha o polígono (mínimo 3).
         </p>
       )}
+    </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Dashboard popover — simple absolute-positioned card over the canvas
+// (Plan 01-07: avoids adding @radix-ui/react-popover; matches the project's
+// "minimal-shadcn" style of inline divs.)
+// ────────────────────────────────────────────────────────────────────────────
+
+interface DashboardLotPopoverProps {
+  anchorX: number
+  anchorY: number
+  lotCode: string
+  meta: DashboardLotMeta
+  onClose: () => void
+}
+
+const STATUS_LABEL_PTBR: Record<string, string> = {
+  available: 'Disponível',
+  reserved: 'Reservado',
+  sold: 'Vendido',
+}
+
+function formatBRL(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value)
+}
+
+function DashboardLotPopover({
+  anchorX,
+  anchorY,
+  lotCode,
+  meta,
+  onClose,
+}: DashboardLotPopoverProps) {
+  // Clamp the popover so it doesn't escape the canvas. Stage width/height are
+  // the constants from above (1200×800). A 240×140 popover with a 12px gap.
+  const POPOVER_W = 240
+  const POPOVER_H = 140
+  const left = Math.min(Math.max(anchorX + 12, 0), STAGE_WIDTH - POPOVER_W)
+  const top = Math.min(Math.max(anchorY + 12, 0), STAGE_HEIGHT - POPOVER_H)
+  const statusLabel = STATUS_LABEL_PTBR[meta.status] ?? meta.status
+  return (
+    <div
+      className="absolute z-10 w-60 rounded-md border border-slate-200 bg-white p-3 shadow-lg"
+      style={{ left, top }}
+      data-testid="planta-dashboard-popover"
+      data-lot-id={meta.id}
+    >
+      <div className="mb-2 flex items-start justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Lote {lotCode}</p>
+          <p className="text-xs text-slate-500">{meta.categoryName}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded text-slate-400 hover:text-slate-700"
+          aria-label="Fechar"
+        >
+          ×
+        </button>
+      </div>
+      <dl className="space-y-1 text-xs text-slate-700">
+        <div className="flex justify-between gap-2">
+          <dt className="text-slate-500">Status:</dt>
+          <dd className="font-medium" style={{ color: meta.colorStroke }}>
+            {statusLabel}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-slate-500">Preço:</dt>
+          <dd className="font-medium">{formatBRL(meta.priceBRL)}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-slate-500">Fornecedor:</dt>
+          <dd className="font-medium text-right">{meta.vendorLegalName ?? '—'}</dd>
+        </div>
+      </dl>
     </div>
   )
 }

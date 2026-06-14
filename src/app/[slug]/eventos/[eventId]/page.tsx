@@ -131,9 +131,18 @@ export default async function EventoDetailPage({ params }: PageProps) {
             <p className="text-sm text-slate-500">Nenhuma planta cadastrada ainda.</p>
           )}
           <PlantaUploader eventId={ev.id} tenantSlug={slug} />
-          <div className="pt-2">
+          <div className="flex flex-wrap gap-2 pt-2">
             <Button asChild variant="outline">
               <Link href={`/${slug}/eventos/${ev.id}/planta`}>Abrir editor da planta →</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/${slug}/eventos/${ev.id}/categorias`}>Categorias</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/${slug}/eventos/${ev.id}/dashboard`}>Dashboard de ocupação →</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/${slug}/eventos/${ev.id}/financeiro`}>Financeiro →</Link>
             </Button>
           </div>
         </CardContent>
