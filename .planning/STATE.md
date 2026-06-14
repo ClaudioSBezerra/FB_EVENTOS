@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 paused at plan 01-04 Task 1 partial (CNPJ validators + cache schema committed; BrasilAPI action + tests pending)
-last_updated: "2026-06-14T12:41:09.465Z"
+last_updated: "2026-06-14T13:17:35.570Z"
 last_activity: 2026-06-14
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 15
-  completed_plans: 10
+  completed_plans: 11
   percent: 20
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 01 (Organizadora End-to-End (Piloto Festa de Trindade)) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-06-14
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 73%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████░░░░] 60%
 | Phase 00 P06 | 60min | 3 tasks | 20 files |
 | Phase 01 P01 | 135min | 3 tasks | 28 files |
 | Phase 01 P02 | 55min | 2 tasks | 13 files |
+| Phase 01 P04 | 80 | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,10 @@ Recent decisions affecting current work:
 - [Phase 00]: Plan 06 established three patterns: (1) 'Probe test for SQL function signatures' — boot the dependency briefly, read pg_proc, invoke the named-arg form; catches drift BEFORE downstream code depends on it. (2) 'Outbox via enqueueJob(tx, ...)' — Phase 2 Server Actions get atomic business-write + side-effect-enqueue for free. (3) '::text::json double cast' for postgres.js → graphile-worker payload integrity — without it, payloads are stored as JSON strings (json_typeof = 'string') and the task handler receives a string instead of an object.
 - [Phase ?]: [Phase 01]: Plan 01-01: 12 RLS-FORCED domain tables + Wave 0 test infra + setActiveOrganization → session.tenant_id wiring via Better Auth databaseHooks. Pattern: SECURITY DEFINER tenant-context-resolution function owned by NOLOGIN+BYPASSRLS fb_eventos_sysreader role
 - [Phase ?]: [Phase 01]: Plan 01-01 established Wave 0 test pattern — MSW server with happy-path defaults + per-test overrides for ZapSign/Pagar.me/BrasilAPI/Resend, in-memory MockMinIOClient matching minio-js v8 surface, 3 raw-SQL factories bypassing FORCE RLS via migratorPool
+- [Phase ?]: [Phase 01]: Plan 01-04: D-16 materialized — 2-layer CNPJ (cnpjSchema Layer 1 + lookupCNPJCore Layer 2 with 7-day cnpj_lookup_cache, AbortController 5s timeout, degrade-with-warning); cnpj_redacted in audit payloads; email job envelope { tenant_id, vendor_id, event, legal_name, email, reason? } pinned for 01-08 via notifications.test.ts
+- [Phase ?]: [Phase 01]: Plan 01-04 established 'rawSqlFromTenantDb' pattern (extracts postgres.js TransactionSql from Drizzle TenantDb via session.client) so enqueueJob lands in the same tx as the business UPDATE — outbox pattern over a Drizzle handle; future actions wanting atomic side-effects can reuse this 1-line helper
+- [Phase ?]: [Phase 01]: Plan 01-04 established 'no-RLS on global public-data cache' pattern (cnpj_lookup_cache stores Receita Federal data shared cross-tenant); COMMENT ON TABLE documents the no-RLS decision so future contributors don't 'fix' it
+- [Phase ?]: [Phase 01]: Plan 01-04 established 'audit-on-every-download' pattern for LGPD compliance: mintVendorDocDownloadUrl writes audit_log row BEFORE returning URL — the audit row IS the compliance contract, not the URL itself. Cross-tenant attempts throw BEFORE recordAudit to avoid polluting victim's audit_log
 
 ### Pending Todos
 
@@ -105,6 +110,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-06-14T12:41:09.449Z
+Last session: 2026-06-14T13:16:46.145Z
 Stopped at: Phase 1 paused at plan 01-04 Task 1 partial (CNPJ validators + cache schema committed; BrasilAPI action + tests pending)
-Resume file: .planning/phases/01-organizadora-end-to-end-piloto-festa-de-trindade/01-04-fornecedor-crud-approval-vault-brasilapi-PLAN.md
+Resume file: None
