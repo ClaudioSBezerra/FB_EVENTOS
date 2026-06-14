@@ -124,10 +124,25 @@ export async function assignLotToVendorInTenant(
       .returning()
     inserted = rows[0]
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    if (/lot_assignments_lot_id_active_unique/.test(msg) || /duplicate key/.test(msg)) {
-      throw new Error('Lote já está atribuído a outro fornecedor')
+    // Walk the error chain — Drizzle wraps the original postgres.js error
+    // as `{message: "Failed query: ...", cause: <PostgresError>}`. The
+    // constraint name + code 23505 live on `cause`.
+    let cur: unknown = err
+    let matched = false
+    for (let i = 0; i < 4 && cur != null; i++) {
+      const msg = cur instanceof Error ? cur.message : String(cur)
+      const code = (cur as { code?: unknown }).code
+      if (
+        /lot_assignments_lot_id_active_unique/.test(msg) ||
+        /duplicate key/.test(msg) ||
+        code === '23505'
+      ) {
+        matched = true
+        break
+      }
+      cur = (cur as { cause?: unknown }).cause
     }
+    if (matched) throw new Error('Lote já está atribuído a outro fornecedor')
     throw err
   }
   if (!inserted) throw new Error('assignLotToVendorInTenant: insert returned no row')
