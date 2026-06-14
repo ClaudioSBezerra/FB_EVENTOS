@@ -57,7 +57,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 01-03-PLAN.md — Konva editor + lots (polygon2d v1 jsonb) + categories (aditivo pricing) + lot assignment + ADR-0003
 - [x] 01-04-PLAN.md — Fornecedor CRUD + approval FSM + BrasilAPI CNPJ (2-layer + degrade-with-warning + 7d cache) + vendor doc cofre
 - [x] 01-05-PLAN.md — Contracts + @react-pdf templates + ZapSign sequential signers + webhook re-fetch defense + ADR-0002 + ADR-0004
-- [ ] 01-06-PLAN.md — Pagar.me v5 simple charges (PIX + cartão, sem split) + webhook re-fetch defense + idempotency
+- [x] 01-06-PLAN.md — Pagar.me v5 simple charges (PIX + cartão, sem split) + webhook re-fetch defense + idempotency
 - [ ] 01-07-PLAN.md — Dashboards ocupação (Konva read-only colorido) + financeiro (recebido / a receber / comissão por fornecedor)
 - [ ] 01-08-PLAN.md — Resend pt-BR templates (6 events) + walking-skeleton D-14 4-step gate extension + RUNBOOK operator flip checklist (checkpoint)
 **UI hint**: yes
@@ -112,7 +112,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 7/7 | Complete   | 2026-06-12 |
-| 1. Organizadora End-to-End (Piloto Festa de Trindade) | 5/8 | In Progress|  |
+| 1. Organizadora End-to-End (Piloto Festa de Trindade) | 6/8 | In Progress|  |
 | 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/TBD | Not started | - |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
 | 4. Público — Ticketing, F&B, Marketplace, Integrações | 0/TBD | Not started | - |
