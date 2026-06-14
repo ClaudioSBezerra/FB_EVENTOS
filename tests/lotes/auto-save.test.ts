@@ -15,20 +15,20 @@
 // Tests bypass the next-safe-action wrapper by calling the pure helpers
 // directly inside withTenant() — same pattern as Plan 01-02.
 
-import { afterAll, beforeEach, describe, expect, test } from 'vitest'
 import { and, eq } from 'drizzle-orm'
+import { afterAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { pool } from '@/db'
 import { auditLog } from '@/db/schema/audit'
 import { withTenant } from '@/db/with-tenant'
+import { createEventInTenant } from '@/lib/actions/eventos'
 import {
   createLotInTenant,
   deleteLotInTenant,
   listEventLotsInTenant,
   updateLotGeometryInTenant,
 } from '@/lib/actions/lots'
-import { createEventInTenant } from '@/lib/actions/eventos'
-import { type Geometry } from '@/lib/validators/geometry'
+import type { Geometry } from '@/lib/validators/geometry'
 import { appPool, createTenant, insertUser, migratorPool } from '@/test/db'
 import { makeLotCategory } from '@/test/factories/lot-category-factory'
 

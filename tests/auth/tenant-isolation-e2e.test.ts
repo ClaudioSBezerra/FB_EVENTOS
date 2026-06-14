@@ -28,19 +28,14 @@
 // If any of these fail, the multi-tenant promise of FB_EVENTOS is broken —
 // STOP and re-examine Plan 03 + Plan 04 + the current migration chain.
 
-import { afterAll, beforeEach, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { afterAll, beforeEach, expect, test } from 'vitest'
 
 import { pool } from '@/db'
 import { member, organization } from '@/db/schema/auth'
 import { withTenant } from '@/db/with-tenant'
-import {
-  appPool,
-  createTenant,
-  insertOrganization,
-  migratorPool,
-} from '@/test/db'
 import { markEmailVerified, signUpUser } from '@/test/auth-helpers'
+import { appPool, createTenant, insertOrganization, migratorPool } from '@/test/db'
 
 const PASSWORD = 'super-secret-password-1234'
 

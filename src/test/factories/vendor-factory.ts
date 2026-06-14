@@ -2,15 +2,18 @@
 //
 // Builds a `vendors` row with a valid stub CNPJ (matches the CNPJ used by
 // the external-mocks BrasilAPI happy-path response so the BrasilAPI test
-// path resolves to "ACTIVE" by default). Uses the migratorPool for fast
-// test setup.
+// path resolves to "ACTIVE" by default).
+//
+// FORCE RLS on `vendors` blocks the migrator path the original Plan 01-01
+// docstring assumed; we use appPool inside a SET LOCAL transaction (same
+// pattern as `insertOrganization` in test/db.ts and lot-category-factory).
 //
 // REFERENCES:
 //   - 01-RESEARCH.md §A1 (vendors schema)
 //   - src/test/external-mocks.ts (BRASILAPI_CNPJ_ACTIVE.cnpj)
-//   - src/test/db.ts (migratorPool pattern)
+//   - src/test/db.ts (appPool + SET LOCAL pattern)
 
-import { migratorPool } from '@/test/db'
+import { appPool } from '@/test/db'
 
 /**
  * Default stub CNPJ — matches `BRASILAPI_CNPJ_ACTIVE.cnpj` in external-mocks
@@ -64,31 +67,34 @@ export async function makeVendor(
     approvalReason: overrides.approvalReason ?? null,
   }
 
-  const rows = await migratorPool<
-    Array<{
-      id: string
-      tenant_id: string
-      cnpj: string
-      legal_name: string
-      trade_name: string | null
-      email: string
-      phone: string | null
-      status: string
-      cnpj_verified: boolean
-      approval_reason: string | null
-    }>
-  >`
-    INSERT INTO vendors (
-      tenant_id, cnpj, legal_name, trade_name, email, phone, status,
-      cnpj_verified, approval_reason
-    ) VALUES (
-      ${tenantId}, ${defaults.cnpj}, ${defaults.legalName}, ${defaults.tradeName},
-      ${defaults.email}, ${defaults.phone}, ${defaults.status},
-      ${defaults.cnpjVerified}, ${defaults.approvalReason}
-    )
-    RETURNING id, tenant_id, cnpj, legal_name, trade_name, email, phone,
-              status, cnpj_verified, approval_reason
-  `
+  const rows = await appPool.begin(async (tx) => {
+    await tx`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`
+    return tx<
+      Array<{
+        id: string
+        tenant_id: string
+        cnpj: string
+        legal_name: string
+        trade_name: string | null
+        email: string
+        phone: string | null
+        status: string
+        cnpj_verified: boolean
+        approval_reason: string | null
+      }>
+    >`
+      INSERT INTO vendors (
+        tenant_id, cnpj, legal_name, trade_name, email, phone, status,
+        cnpj_verified, approval_reason
+      ) VALUES (
+        ${tenantId}, ${defaults.cnpj}, ${defaults.legalName}, ${defaults.tradeName},
+        ${defaults.email}, ${defaults.phone}, ${defaults.status},
+        ${defaults.cnpjVerified}, ${defaults.approvalReason}
+      )
+      RETURNING id, tenant_id, cnpj, legal_name, trade_name, email, phone,
+                status, cnpj_verified, approval_reason
+    `
+  })
 
   if (!rows[0]) throw new Error('makeVendor: no row returned')
   const r = rows[0]

@@ -51,10 +51,7 @@ test('TENA-05 silent-fail: singleton db without withTenant returns 0 tenant rows
       .from(organization)
   } catch (err) {
     const pgErr = err as { code?: string }
-    expect(
-      pgErr.code,
-      'Expected 22P02 CAST failure from RLS predicate evaluation',
-    ).toBe('22P02')
+    expect(pgErr.code, 'Expected 22P02 CAST failure from RLS predicate evaluation').toBe('22P02')
   }
   expect(result.length).toBe(0)
 })

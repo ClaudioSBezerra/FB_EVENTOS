@@ -16,19 +16,19 @@
 // Tests inject the in-memory MinIO mock via setMinIOClientForTests so they
 // never need a running MinIO container.
 
-import { afterAll, beforeEach, describe, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { afterAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { pool } from '@/db'
 import { events } from '@/db/schema/events'
 import { withTenant } from '@/db/with-tenant'
+import { createEventInTenant } from '@/lib/actions/eventos'
 import {
   confirmEventPlantaUploadInTenant,
   mintEventPlantaUploadUrlInTenant,
   PLANTA_MAX_BYTES,
 } from '@/lib/actions/minio-presign'
 import { resetMinIOClient, setMinIOClientForTests } from '@/lib/storage/minio'
-import { createEventInTenant } from '@/lib/actions/eventos'
 import { appPool, createTenant, insertUser, migratorPool } from '@/test/db'
 import { getMockMinIO, resetMockMinIO } from '@/test/minio-test'
 
@@ -93,7 +93,9 @@ describe('planta upload — pre-signed PUT + statObject verification (Plan 01-02
     })
 
     expect(result.bucket).toBe(`${tenantASlug}-uploads`)
-    expect(result.key).toMatch(new RegExp(`^plantas/${eventAId}/[0-9a-f]{16}-planta-trindade\\.pdf$`))
+    expect(result.key).toMatch(
+      new RegExp(`^plantas/${eventAId}/[0-9a-f]{16}-planta-trindade\\.pdf$`),
+    )
     expect(result.contentType).toBe('application/pdf')
     expect(result.sizeMaxBytes).toBe(PLANTA_MAX_BYTES)
     expect(result.url).toContain(result.bucket)

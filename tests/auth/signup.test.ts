@@ -7,14 +7,14 @@
 //
 // All tests use Better Auth's handler directly via auth.handler(req).
 
-import { afterAll, beforeEach, describe, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { afterAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { auth } from '@/auth/server'
 import { db, pool } from '@/db'
 import { user as userTable } from '@/db/schema/auth'
-import { appPool, migratorPool } from '@/test/db'
 import { signUpUser } from '@/test/auth-helpers'
+import { appPool, migratorPool } from '@/test/db'
 
 afterAll(async () => {
   await appPool.end({ timeout: 5 })

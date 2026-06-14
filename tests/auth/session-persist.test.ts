@@ -4,8 +4,8 @@
 // follow-up request with that cookie returns the SAME session (proving
 // persistence across browser refreshes).
 
-import { afterAll, beforeEach, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { afterAll, beforeEach, expect, test } from 'vitest'
 
 import { auth } from '@/auth/server'
 import { pool } from '@/db'

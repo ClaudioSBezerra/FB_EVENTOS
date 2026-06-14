@@ -13,9 +13,8 @@
 
 import { NextRequest } from 'next/server'
 import { describe, expect, test, vi } from 'vitest'
-
+import { SYSTEM_PREFIXES, slugReserved } from '@/lib/tenant'
 import { middleware } from '@/middleware'
-import { slugReserved, SYSTEM_PREFIXES } from '@/lib/tenant'
 
 describe('SYSTEM_PREFIXES + slugReserved', () => {
   test('all 15 prefixes are present', () => {
@@ -73,9 +72,7 @@ describe('middleware — request id', () => {
     const res = middleware(req)
     const id = res.headers.get('x-request-id')
     expect(id).toBeTruthy()
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    )
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
   })
 
   test('preserves an inbound x-request-id', () => {
@@ -103,10 +100,7 @@ describe('TENA-05 split — middleware does NOT touch the DB', () => {
     // Read the middleware source and assert no DB-layer imports.
     const fs = await import('node:fs/promises')
     const path = await import('node:path')
-    const src = await fs.readFile(
-      path.resolve(process.cwd(), 'src/middleware.ts'),
-      'utf8',
-    )
+    const src = await fs.readFile(path.resolve(process.cwd(), 'src/middleware.ts'), 'utf8')
     expect(src).not.toMatch(/from\s+['"]postgres['"]/)
     expect(src).not.toMatch(/from\s+['"]drizzle-orm/)
     expect(src).not.toMatch(/from\s+['"]@\/db['"]/)

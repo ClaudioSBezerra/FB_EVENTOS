@@ -15,8 +15,8 @@
 // updateEventInTenant, listEventsInTenant) so we exercise the RLS contract
 // without needing a Better Auth session round-trip.
 
+import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, test } from 'vitest'
-
 import { pool } from '@/db'
 import { auditLog } from '@/db/schema/audit'
 import { withTenant } from '@/db/with-tenant'
@@ -28,7 +28,6 @@ import {
 } from '@/lib/actions/eventos'
 import { eventCreateSchema } from '@/lib/validators/event'
 import { appPool, createTenant, insertUser, migratorPool } from '@/test/db'
-import { and, eq } from 'drizzle-orm'
 
 let tenantAId = ''
 let tenantBId = ''
