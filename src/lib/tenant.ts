@@ -62,3 +62,21 @@ export async function fetchTenantIdForOrg(orgId: string): Promise<string | null>
     .limit(1)
   return tenant[0]?.id ?? null
 }
+
+/**
+ * Look up tenant slug for a tenant_id. Used by Server Actions / job
+ * handlers that need the canonical MinIO bucket name (`{slug}-uploads`)
+ * but only carry the tenant_id from session/job payload.
+ *
+ * The `tenants` table has no RLS; this is safe to call outside withTenant().
+ */
+export async function resolveTenantSlug(tenantId: string): Promise<string> {
+  const rows = await db
+    .select({ slug: tenants.slug })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1)
+  const slug = rows[0]?.slug
+  if (!slug) throw new Error(`Tenant ${tenantId} not found`)
+  return slug
+}

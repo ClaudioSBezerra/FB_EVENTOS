@@ -73,6 +73,12 @@ const envSchema = z.object({
   SENTRY_AUTH_TOKEN: z.string().optional(),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
 
+  // ZapSign (Phase 1, Plan 01-05)
+  ZAPSIGN_TOKEN: z.string().optional(),
+  ZAPSIGN_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  ZAPSIGN_WEBHOOK_USER: z.string().optional(),
+  ZAPSIGN_WEBHOOK_PASS: z.string().optional(),
+
   // App
   NEXT_PUBLIC_APP_URL: z.url('NEXT_PUBLIC_APP_URL must be a valid URL'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

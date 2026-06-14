@@ -9,8 +9,10 @@ import type { TaskList } from 'graphile-worker'
 
 import { echo } from './echo'
 import { PDF_GENERATE_CONTRACT_TASK, pdfGenerateContract } from './pdf-generate-contract'
+import { ZAPSIGN_SEND_CONTRACT_TASK, zapsignSendContract } from './zapsign-send-contract'
 
 export const taskList: TaskList = {
   echo,
   [PDF_GENERATE_CONTRACT_TASK]: pdfGenerateContract,
+  [ZAPSIGN_SEND_CONTRACT_TASK]: zapsignSendContract,
 }
