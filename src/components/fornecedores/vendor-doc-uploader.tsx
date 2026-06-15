@@ -20,12 +20,11 @@ import { useRef, useState, useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { confirmVendorDocUpload, mintVendorDocUploadUrl } from '@/lib/actions/vendor-docs'
 import {
-  confirmVendorDocUpload,
-  mintVendorDocUploadUrl,
   VENDOR_DOC_ALLOWED_CONTENT_TYPES,
   VENDOR_DOC_MAX_BYTES,
-} from '@/lib/actions/vendor-docs'
+} from '@/lib/actions/vendor-docs.shared'
 
 const DOC_TYPE_OPTIONS = [
   { value: 'rg', label: 'RG / CPF' },

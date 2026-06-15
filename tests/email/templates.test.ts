@@ -22,8 +22,7 @@ import {
 const CANONICAL_LINK_REGEX = /https:\/\/eventos\.fbtax\.cloud\/[^\s"<>)]+/g
 // Any http(s) link in template output that does NOT match the canonical
 // domain — used to assert no foreign hosts leak in.
-const FOREIGN_LINK_REGEX =
-  /https?:\/\/(?!eventos\.fbtax\.cloud\b)[^\s"<>)]+/g
+const FOREIGN_LINK_REGEX = /https?:\/\/(?!eventos\.fbtax\.cloud\b)[^\s"<>)]+/g
 
 describe('email templates — uniform contract (Plan 01-08 Task 1)', () => {
   test('CANONICAL_DOMAIN is the production-canonical host', () => {

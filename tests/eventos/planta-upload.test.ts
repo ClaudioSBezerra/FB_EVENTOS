@@ -26,8 +26,8 @@ import { createEventInTenant } from '@/lib/actions/eventos'
 import {
   confirmEventPlantaUploadInTenant,
   mintEventPlantaUploadUrlInTenant,
-  PLANTA_MAX_BYTES,
 } from '@/lib/actions/minio-presign'
+import { PLANTA_MAX_BYTES } from '@/lib/actions/minio-presign.shared'
 import { resetMinIOClient, setMinIOClientForTests } from '@/lib/storage/minio'
 import { appPool, createTenant, insertUser, migratorPool } from '@/test/db'
 import { getMockMinIO, resetMockMinIO } from '@/test/minio-test'

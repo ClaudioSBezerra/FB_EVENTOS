@@ -3,12 +3,12 @@
 //
 // TODO (Plan 02-08): import { recordConsent, revokeConsent } from '@/lib/actions/consents'
 
-import { describe, it } from 'vitest';
+import { describe, it } from 'vitest'
 
 describe('FORN-18: vendor consent FSM + audit', () => {
-  it.todo('recordConsent inserts vendor_consents row + audit_log row');
-  it.todo('three independent consent types stored: marketing, analytics, payment_data');
-  it.todo('revokeConsent sets revoked_at + appends second audit row');
-  it.todo('consent_text snapshot preserved when consent_version bumps');
-  it.todo('cross-tenant: consent in tenant A invisible in tenant B (RLS)');
-});
+  it.todo('recordConsent inserts vendor_consents row + audit_log row')
+  it.todo('three independent consent types stored: marketing, analytics, payment_data')
+  it.todo('revokeConsent sets revoked_at + appends second audit row')
+  it.todo('consent_text snapshot preserved when consent_version bumps')
+  it.todo('cross-tenant: consent in tenant A invisible in tenant B (RLS)')
+})

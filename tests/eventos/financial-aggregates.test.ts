@@ -16,8 +16,8 @@ import { getEventFinancialsInTenant } from '@/lib/actions/dashboard'
 import { appPool, createTenant, migratorPool } from '@/test/db'
 import { makeContract } from '@/test/factories/contract-factory'
 import { makeEvent } from '@/test/factories/event-factory'
-import { makeLot } from '@/test/factories/lot-factory'
 import { makeLotCategory } from '@/test/factories/lot-category-factory'
+import { makeLot } from '@/test/factories/lot-factory'
 import { makeVendor } from '@/test/factories/vendor-factory'
 
 afterAll(async () => {

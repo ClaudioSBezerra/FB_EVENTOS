@@ -18,12 +18,8 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  confirmEventPlantaUpload,
-  mintEventPlantaUploadUrl,
-  PLANTA_ALLOWED_CONTENT_TYPES,
-  PLANTA_MAX_BYTES,
-} from '@/lib/actions/minio-presign'
+import { confirmEventPlantaUpload, mintEventPlantaUploadUrl } from '@/lib/actions/minio-presign'
+import { PLANTA_ALLOWED_CONTENT_TYPES, PLANTA_MAX_BYTES } from '@/lib/actions/minio-presign.shared'
 
 interface PlantaUploaderProps {
   eventId: string

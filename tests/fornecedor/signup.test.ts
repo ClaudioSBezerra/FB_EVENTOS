@@ -20,7 +20,7 @@
 import { run } from 'graphile-worker'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { pool } from '@/db'
-import { EMAIL_STATUS_UPDATE_TASK } from '@/lib/actions/fornecedores'
+import { EMAIL_STATUS_UPDATE_TASK } from '@/lib/actions/fornecedores.shared'
 import {
   type SignupFornecedorInput,
   signupFornecedorForTenant,

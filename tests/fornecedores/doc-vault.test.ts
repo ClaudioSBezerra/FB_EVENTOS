@@ -21,10 +21,12 @@ import {
   listVendorDocsInTenant,
   mintVendorDocDownloadUrlInTenant,
   mintVendorDocUploadUrlInTenant,
+} from '@/lib/actions/vendor-docs'
+import {
   VENDOR_DOC_GET_TTL_SECONDS,
   VENDOR_DOC_MAX_BYTES,
   VENDOR_DOC_PUT_TTL_SECONDS,
-} from '@/lib/actions/vendor-docs'
+} from '@/lib/actions/vendor-docs.shared'
 import { resetMinIOClient, setMinIOClientForTests } from '@/lib/storage/minio'
 import { appPool, createTenant, insertUser, migratorPool } from '@/test/db'
 import { makeVendor } from '@/test/factories/vendor-factory'

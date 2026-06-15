@@ -80,7 +80,7 @@ describe.skip('AM-06: Pagar.me installments-shape probe (requires sandbox key)',
     })
 
     expect(res.ok, `Pagar.me API returned ${res.status}: ${await res.text()}`).toBe(true)
-    const json = await res.json() as Record<string, unknown>
+    const json = (await res.json()) as Record<string, unknown>
 
     // Capture the charge response for installments shape inspection.
     const charges = (json.charges as Array<Record<string, unknown>>) ?? []

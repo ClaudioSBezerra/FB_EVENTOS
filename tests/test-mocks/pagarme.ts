@@ -12,19 +12,19 @@
 // Intent: make tests/payments/*, tests/webhooks/*, tests/refunds/*
 // importable without each test re-rolling its own handler set.
 
-import { HttpResponse, http, type HttpHandler } from 'msw';
+import { type HttpHandler, HttpResponse, http } from 'msw'
 
 export type PagarmeMockOpts = {
-  baseUrl?: string;
+  baseUrl?: string
   // Override individual endpoints. When omitted, the default stub responds 200.
   overrides?: {
-    createOrder?: HttpHandler;
-    getOrder?: HttpHandler;
-    refundCharge?: HttpHandler;
-  };
-};
+    createOrder?: HttpHandler
+    getOrder?: HttpHandler
+    refundCharge?: HttpHandler
+  }
+}
 
-const DEFAULT_BASE = 'https://api.pagar.me';
+const DEFAULT_BASE = 'https://api.pagar.me'
 
 function pixOrderResponse(orderId: string) {
   return {
@@ -43,7 +43,7 @@ function pixOrderResponse(orderId: string) {
         },
       },
     ],
-  };
+  }
 }
 
 function creditCardOrderResponse(orderId: string, installments: number) {
@@ -63,75 +63,75 @@ function creditCardOrderResponse(orderId: string, installments: number) {
         },
       },
     ],
-  };
+  }
 }
 
 export function createPagarmeMswHandlers(opts: PagarmeMockOpts = {}): HttpHandler[] {
-  const base = opts.baseUrl ?? DEFAULT_BASE;
-  const handlers: HttpHandler[] = [];
+  const base = opts.baseUrl ?? DEFAULT_BASE
+  const handlers: HttpHandler[] = []
 
   handlers.push(
     opts.overrides?.createOrder ??
       http.post(`${base}/core/v5/orders`, async ({ request }) => {
-        const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-        const orderId = `or_${Math.random().toString(36).slice(2, 10)}`;
-        const payments = (body.payments ?? []) as Array<Record<string, unknown>>;
-        const first = payments[0] ?? {};
+        const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+        const orderId = `or_${Math.random().toString(36).slice(2, 10)}`
+        const payments = (body.payments ?? []) as Array<Record<string, unknown>>
+        const first = payments[0] ?? {}
         if (first.payment_method === 'pix') {
-          return HttpResponse.json(pixOrderResponse(orderId), { status: 200 });
+          return HttpResponse.json(pixOrderResponse(orderId), { status: 200 })
         }
-        const ccInfo = (first.credit_card ?? {}) as Record<string, unknown>;
-        const installments = Number(ccInfo.installments ?? 1);
+        const ccInfo = (first.credit_card ?? {}) as Record<string, unknown>
+        const installments = Number(ccInfo.installments ?? 1)
         return HttpResponse.json(creditCardOrderResponse(orderId, installments), {
           status: 200,
-        });
-      })
-  );
+        })
+      }),
+  )
 
   handlers.push(
     opts.overrides?.getOrder ??
       http.get(`${base}/core/v5/orders/:id`, ({ params }) => {
-        const id = String(params.id);
-        return HttpResponse.json(pixOrderResponse(id), { status: 200 });
-      })
-  );
+        const id = String(params.id)
+        return HttpResponse.json(pixOrderResponse(id), { status: 200 })
+      }),
+  )
 
   handlers.push(
     opts.overrides?.refundCharge ??
       http.delete(`${base}/core/v5/charges/:id`, async ({ params, request }) => {
-        const chargeId = String(params.id);
-        const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+        const chargeId = String(params.id)
+        const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
         return HttpResponse.json(
           {
             id: chargeId,
             status: 'refunded',
             amount: body.amount ?? null,
           },
-          { status: 200 }
-        );
-      })
-  );
+          { status: 200 },
+        )
+      }),
+  )
 
-  return handlers;
+  return handlers
 }
 
 // HMAC signature header generation helper.
 // Plan 02-05 probe-test (tests/probes/pagarme-hmac-header-probe.test.ts)
 // pins the header name. Default 'X-Hub-Signature' is a placeholder until
 // AM-02 probe resolves.
-export type HmacAlgo = 'sha256';
+export type HmacAlgo = 'sha256'
 
 export function signPagarmePayload(
   rawBody: string,
   secret: string,
-  algo: HmacAlgo = 'sha256'
+  algo: HmacAlgo = 'sha256',
 ): string {
   // Lazy require to avoid bundling crypto in client tests that import this module.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const crypto = require('node:crypto') as typeof import('node:crypto');
-  const mac = crypto.createHmac(algo, secret);
-  mac.update(rawBody);
-  return mac.digest('base64');
+  const crypto = require('node:crypto') as typeof import('node:crypto')
+  const mac = crypto.createHmac(algo, secret)
+  mac.update(rawBody)
+  return mac.digest('base64')
 }
 
-export const DEFAULT_HMAC_HEADER = 'X-Hub-Signature';
+export const DEFAULT_HMAC_HEADER = 'X-Hub-Signature'

@@ -25,9 +25,9 @@ import { withTenant } from '@/db/with-tenant'
 import {
   approveVendorInTenant,
   createVendorInTenant,
-  EMAIL_STATUS_UPDATE_TASK,
   rejectVendorInTenant,
 } from '@/lib/actions/fornecedores'
+import { EMAIL_STATUS_UPDATE_TASK } from '@/lib/actions/fornecedores.shared'
 import { appPool, createTenant, insertUser, migratorPool } from '@/test/db'
 import { setupExternalMocks } from '@/test/external-mocks'
 import { makeVendor } from '@/test/factories/vendor-factory'

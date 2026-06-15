@@ -47,7 +47,8 @@ import type { TransactionSql } from 'postgres'
 import { vendors } from '@/db/schema/vendors'
 import type { TenantDb } from '@/db/with-tenant'
 import { enqueueJob } from '@/jobs/enqueue'
-import { type LookupResult, lookupCNPJCore } from '@/lib/actions/brasilapi'
+import { lookupCNPJCore } from '@/lib/actions/brasilapi'
+import type { LookupResult } from '@/lib/actions/brasilapi.shared'
 import { withTenantAction } from '@/lib/actions/safe-action'
 import { recordAudit } from '@/lib/audit'
 import { normalizeCNPJ, redactCNPJ } from '@/lib/validators/cnpj'
@@ -64,33 +65,11 @@ import {
   vendorUpdateSchema,
 } from '@/lib/validators/vendor'
 
-// ────────────────────────────────────────────────────────────────────────────
-// Email job task name — handler lands in Plan 01-08
-// ────────────────────────────────────────────────────────────────────────────
-
-export const EMAIL_STATUS_UPDATE_TASK = 'email.send-status-update'
-
-export type VendorEmailEvent = 'signup_fornecedor' | 'aprovacao_fornecedor' | 'rejecao_fornecedor'
-
-// ────────────────────────────────────────────────────────────────────────────
-// Persisted row shape
-// ────────────────────────────────────────────────────────────────────────────
-
-export interface PersistedVendor {
-  id: string
-  tenantId: string
-  legalName: string
-  tradeName: string | null
-  cnpj: string
-  cnpjVerified: boolean
-  cnpjCheckedAt: Date | null
-  email: string
-  phone: string | null
-  status: string
-  approvalReason: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+import {
+  EMAIL_STATUS_UPDATE_TASK,
+  type PersistedVendor,
+  type VendorEmailEvent,
+} from './fornecedores.shared'
 
 function toPersistedVendor(row: typeof vendors.$inferSelect): PersistedVendor {
   return {

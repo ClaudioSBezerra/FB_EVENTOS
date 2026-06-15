@@ -133,6 +133,6 @@ export function computeInstallmentAmount(
   const r = monthlyRate
   const n = installments
   // Price formula
-  const factor = (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1)
+  const factor = (r * (1 + r) ** n) / ((1 + r) ** n - 1)
   return Math.round(totalCents * factor)
 }

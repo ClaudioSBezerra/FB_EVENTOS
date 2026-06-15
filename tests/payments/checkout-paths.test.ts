@@ -12,10 +12,9 @@
 // Uses MSW to mock Pagar.me API (no real HTTP calls).
 // Uses real Postgres via withTenant for DB assertions.
 
+import { eq } from 'drizzle-orm'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest'
-
-import { eq } from 'drizzle-orm'
 import { pool } from '@/db'
 import { payments } from '@/db/schema/payments'
 import { withTenant } from '@/db/with-tenant'
@@ -23,11 +22,11 @@ import { checkoutCartInTenant } from '@/lib/actions/checkout'
 import { computeInstallmentAmount } from '@/lib/pagarme/installments-shape.generated'
 import { checkoutCartSchema } from '@/lib/validators/checkout'
 import { appPool, createTenant, insertOrganization, insertUser, migratorPool } from '@/test/db'
+import { makeContract } from '@/test/factories/contract-factory'
 import { makeEvent } from '@/test/factories/event-factory'
 import { makeLotCategory } from '@/test/factories/lot-category-factory'
 import { makeLot } from '@/test/factories/lot-factory'
 import { makeVendor } from '@/test/factories/vendor-factory'
-import { makeContract } from '@/test/factories/contract-factory'
 import { createPagarmeMswHandlers } from '../test-mocks/pagarme'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -163,7 +162,12 @@ describe('FORN-09: checkout — credit_card installments', () => {
       return checkoutCartInTenant(
         db,
         fx.tenantId,
-        { reservationId: fx.reservationId, method: 'credit_card', cardToken: 'tok_test_1', installments: 1 },
+        {
+          reservationId: fx.reservationId,
+          method: 'credit_card',
+          cardToken: 'tok_test_1',
+          installments: 1,
+        },
         fx.vendorId,
         fx.vendorId,
       )
@@ -182,7 +186,12 @@ describe('FORN-09: checkout — credit_card installments', () => {
       return checkoutCartInTenant(
         db,
         fx.tenantId,
-        { reservationId: fx.reservationId, method: 'credit_card', cardToken: 'tok_test_6', installments: 6 },
+        {
+          reservationId: fx.reservationId,
+          method: 'credit_card',
+          cardToken: 'tok_test_6',
+          installments: 6,
+        },
         fx.vendorId,
         fx.vendorId,
       )
@@ -202,7 +211,12 @@ describe('FORN-09: checkout — credit_card installments', () => {
       return checkoutCartInTenant(
         db,
         fx.tenantId,
-        { reservationId: fx.reservationId, method: 'credit_card', cardToken: 'tok_test_12', installments: 12 },
+        {
+          reservationId: fx.reservationId,
+          method: 'credit_card',
+          cardToken: 'tok_test_12',
+          installments: 12,
+        },
         fx.vendorId,
         fx.vendorId,
       )

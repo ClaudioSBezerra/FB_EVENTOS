@@ -16,15 +16,13 @@
 
 import { createHmac } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
-
+import { POST } from '@/app/api/webhooks/pagarme/route'
 import { pool } from '@/db'
 import { appPool, createTenant, insertOrganization, insertUser, migratorPool } from '@/test/db'
 import { makeEvent } from '@/test/factories/event-factory'
 import { makeLotCategory } from '@/test/factories/lot-category-factory'
 import { makeLot } from '@/test/factories/lot-factory'
 import { makeVendor } from '@/test/factories/vendor-factory'
-
-import { POST } from '@/app/api/webhooks/pagarme/route'
 
 // ────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -161,7 +159,7 @@ describe(`FORN-12: webhook handler perf — p95 < ${P95_BUDGET_MS}ms across N=${
 
     const res = await POST(req as unknown as import('next/server').NextRequest)
     expect(res.status).toBe(200)
-    const json = await res.json() as Record<string, unknown>
+    const json = (await res.json()) as Record<string, unknown>
     // 200 with ok:true proves handler completed without Pagar.me re-fetch.
     expect(json.ok).toBe(true)
   })

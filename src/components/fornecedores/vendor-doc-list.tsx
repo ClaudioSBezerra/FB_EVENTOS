@@ -10,11 +10,8 @@
 import { useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  deleteVendorDoc,
-  mintVendorDocDownloadUrl,
-  type PersistedVendorDoc,
-} from '@/lib/actions/vendor-docs'
+import { deleteVendorDoc, mintVendorDocDownloadUrl } from '@/lib/actions/vendor-docs'
+import type { PersistedVendorDoc } from '@/lib/actions/vendor-docs.shared'
 
 export interface VendorDocListProps {
   tenantSlug: string

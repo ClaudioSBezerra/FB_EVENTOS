@@ -132,16 +132,20 @@ describe('FORN-10: webhook idempotency via inbox', () => {
     const body = webhookPayload(eventId, fx.orderId)
 
     // First delivery.
-    const res1 = await POST(buildWebhookRequest(body) as unknown as import('next/server').NextRequest)
+    const res1 = await POST(
+      buildWebhookRequest(body) as unknown as import('next/server').NextRequest,
+    )
     expect(res1.status).toBe(200)
-    const json1 = await res1.json() as Record<string, unknown>
+    const json1 = (await res1.json()) as Record<string, unknown>
     expect(json1.ok).toBe(true)
     expect(json1.duplicate).toBeFalsy()
 
     // Second delivery (same event id).
-    const res2 = await POST(buildWebhookRequest(body) as unknown as import('next/server').NextRequest)
+    const res2 = await POST(
+      buildWebhookRequest(body) as unknown as import('next/server').NextRequest,
+    )
     expect(res2.status).toBe(200)
-    const json2 = await res2.json() as Record<string, unknown>
+    const json2 = (await res2.json()) as Record<string, unknown>
     expect(json2.ok).toBe(true)
     expect(json2.duplicate).toBe(true)
 
@@ -158,19 +162,23 @@ describe('FORN-10: webhook idempotency via inbox', () => {
     const body = webhookPayload(eventId, fx.orderId)
 
     await POST(buildWebhookRequest(body) as unknown as import('next/server').NextRequest)
-    const res = await POST(buildWebhookRequest(body) as unknown as import('next/server').NextRequest)
+    const res = await POST(
+      buildWebhookRequest(body) as unknown as import('next/server').NextRequest,
+    )
 
     expect(res.status).toBe(200)
-    const json = await res.json() as Record<string, unknown>
+    const json = (await res.json()) as Record<string, unknown>
     expect(json.duplicate).toBe(true)
   })
 
   test('missing order_id in payload → 200 with ignored:no_order_id', async () => {
     const eventId = `hook_${Date.now()}_c`
     const body = JSON.stringify({ id: eventId, type: 'order.paid', data: { id: 'ch_notanorder' } })
-    const res = await POST(buildWebhookRequest(body) as unknown as import('next/server').NextRequest)
+    const res = await POST(
+      buildWebhookRequest(body) as unknown as import('next/server').NextRequest,
+    )
     expect(res.status).toBe(200)
-    const json = await res.json() as Record<string, unknown>
+    const json = (await res.json()) as Record<string, unknown>
     expect(json.ignored).toBe('no_order_id')
   })
 })

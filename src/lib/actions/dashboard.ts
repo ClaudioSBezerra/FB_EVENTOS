@@ -58,8 +58,14 @@ export type LotStatus = 'available' | 'reserved' | 'sold'
  * Status → color tuple consumed by the Konva read-only render in
  * <PlantaEditor mode='dashboard' ... />. Stroke is the solid hex; the
  * fill is the same hex with the editor's standard 25%-alpha suffix ("40").
+ *
+ * NOT exported: Next.js Server Actions (`'use server'`) only allow async
+ * function exports — sync helpers must stay module-private. Consumed only
+ * by `getEventLotsForDashboardInTenant` below. If a Client Component ever
+ * needs the same mapping, extract to `src/lib/lots/colors.ts` (a new
+ * non-`'use server'` module) rather than re-exporting from here.
  */
-export function getLotColorForStatus(status: string): { fill: string; stroke: string } {
+function getLotColorForStatus(status: string): { fill: string; stroke: string } {
   switch (status) {
     case 'sold':
       return { fill: '#EF4444', stroke: '#EF4444' }

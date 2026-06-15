@@ -3,14 +3,12 @@
 //
 // TODO (Plan 02-07): import { requestRefund } from '@/lib/actions/refunds'
 
-import { describe, it } from 'vitest';
+import { describe, it } from 'vitest'
 
 describe('FORN-16: refund end-to-end SAGA', () => {
-  it.todo(
-    'requestRefund creates refund_requests row with refundPct per 4-tier temporal policy'
-  );
-  it.todo('refund.created outbox handler calls Pagar.me DELETE /core/v5/charges/:id');
-  it.todo('refund success → lot.released outbox + waitlist.notify-next enqueued');
-  it.todo('refund failure → refund_requests.status="failed" + audit row');
-  it.todo('idempotent: replay does not double-refund (pagarme_refund_id pinned)');
-});
+  it.todo('requestRefund creates refund_requests row with refundPct per 4-tier temporal policy')
+  it.todo('refund.created outbox handler calls Pagar.me DELETE /core/v5/charges/:id')
+  it.todo('refund success → lot.released outbox + waitlist.notify-next enqueued')
+  it.todo('refund failure → refund_requests.status="failed" + audit row')
+  it.todo('idempotent: replay does not double-refund (pagarme_refund_id pinned)')
+})

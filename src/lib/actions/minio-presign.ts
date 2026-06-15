@@ -35,7 +35,6 @@
 import { randomBytes } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
 
 import { db as singletonDb } from '@/db'
 import { events } from '@/db/schema/events'
@@ -52,16 +51,25 @@ import {
 } from '@/lib/storage/minio'
 
 // ────────────────────────────────────────────────────────────────────────────
-// Configuration constants — ORG-02 contract
+// Constants, Zod schemas, and result types live in minio-presign.shared.ts
+// (Next.js 15 strict 'use server' — only async functions may be exported here).
 // ────────────────────────────────────────────────────────────────────────────
 
-export const PLANTA_MAX_BYTES = 25 * 1024 * 1024 // 25 MB (ORG-02)
-export const PLANTA_PUT_TTL_SECONDS = 300 // 5 min (D-05)
-export const PLANTA_GET_TTL_SECONDS = 900 // 15 min (D-06)
-
-/** Allowed MIME types for planta uploads — content-type lock allowlist. */
-export const PLANTA_ALLOWED_CONTENT_TYPES = ['application/pdf', 'image/png', 'image/jpeg'] as const
-export type PlantaContentType = (typeof PLANTA_ALLOWED_CONTENT_TYPES)[number]
+import {
+  type ConfirmPlantaUploadInput,
+  type ConfirmPlantaUploadResult,
+  confirmPlantaUploadInput,
+  eventOnlyInput,
+  type MintPlantaDownloadResult,
+  type MintPlantaUploadInput,
+  type MintPlantaUploadResult,
+  mintPlantaUploadInput,
+  PLANTA_ALLOWED_CONTENT_TYPES,
+  PLANTA_GET_TTL_SECONDS,
+  PLANTA_MAX_BYTES,
+  PLANTA_PUT_TTL_SECONDS,
+  type PlantaContentType,
+} from './minio-presign.shared'
 
 const contentTypeToExtension: Record<PlantaContentType, string> = {
   'application/pdf': 'pdf',
@@ -75,32 +83,6 @@ const extensionToContentType: Record<string, PlantaContentType> = {
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Zod schemas
-// ────────────────────────────────────────────────────────────────────────────
-
-export const mintPlantaUploadInput = z.object({
-  eventId: z.uuid('Id de evento inválido'),
-  fileName: z.string().trim().min(1, 'Nome do arquivo é obrigatório').max(255),
-  contentType: z.enum(PLANTA_ALLOWED_CONTENT_TYPES),
-  sizeBytes: z
-    .number()
-    .int('Tamanho deve ser inteiro')
-    .min(1, 'Tamanho mínimo 1 byte')
-    .max(PLANTA_MAX_BYTES, `Tamanho máximo é ${PLANTA_MAX_BYTES} bytes (25 MB)`),
-})
-export type MintPlantaUploadInput = z.infer<typeof mintPlantaUploadInput>
-
-export const confirmPlantaUploadInput = z.object({
-  eventId: z.uuid('Id de evento inválido'),
-  key: z.string().trim().min(1).max(512),
-})
-export type ConfirmPlantaUploadInput = z.infer<typeof confirmPlantaUploadInput>
-
-export const eventOnlyInput = z.object({
-  eventId: z.uuid('Id de evento inválido'),
-})
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helper — sanitize a user-provided filename for safe inclusion in a key
@@ -134,33 +116,6 @@ async function resolveTenantSlug(tenantId: string): Promise<string> {
   const slug = rows[0]?.slug
   if (!slug) throw new Error(`Tenant slug not found for tenant_id=${tenantId}`)
   return slug
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Result shapes
-// ────────────────────────────────────────────────────────────────────────────
-
-export interface MintPlantaUploadResult {
-  url: string
-  key: string
-  bucket: string
-  expiresAt: string
-  /** Echoes the content-type the browser MUST send on the PUT. */
-  contentType: PlantaContentType
-  sizeMaxBytes: number
-}
-
-export interface MintPlantaDownloadResult {
-  url: string
-  expiresAt: string
-}
-
-export interface ConfirmPlantaUploadResult {
-  ok: true
-  eventId: string
-  key: string
-  size: number
-  contentType: PlantaContentType
 }
 
 // ────────────────────────────────────────────────────────────────────────────

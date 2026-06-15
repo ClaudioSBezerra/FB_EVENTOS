@@ -33,7 +33,6 @@
 import { randomBytes } from 'node:crypto'
 import { and, desc, eq, isNull } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
 
 import { db as singletonDb } from '@/db'
 import { tenants } from '@/db/schema/tenants'
@@ -49,19 +48,29 @@ import {
 } from '@/lib/storage/minio'
 
 // ────────────────────────────────────────────────────────────────────────────
-// Configuration — ORG-15 contract
+// Constants, Zod schemas, and result types live in vendor-docs.shared.ts
+// (Next.js 15 strict 'use server' — only async functions may be exported here).
 // ────────────────────────────────────────────────────────────────────────────
 
-export const VENDOR_DOC_MAX_BYTES = 25 * 1024 * 1024 // 25 MB
-export const VENDOR_DOC_PUT_TTL_SECONDS = 300 // 5 min (D-05)
-export const VENDOR_DOC_GET_TTL_SECONDS = 900 // 15 min (D-06)
-
-export const VENDOR_DOC_ALLOWED_CONTENT_TYPES = [
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-] as const
-export type VendorDocContentType = (typeof VENDOR_DOC_ALLOWED_CONTENT_TYPES)[number]
+import {
+  type ConfirmVendorDocUploadInput,
+  type ConfirmVendorDocUploadResult,
+  confirmVendorDocUploadInput,
+  type MintVendorDocDownloadResult,
+  type MintVendorDocUploadInput,
+  type MintVendorDocUploadResult,
+  mintVendorDocUploadInput,
+  type PersistedVendorDoc,
+  VENDOR_DOC_ALLOWED_CONTENT_TYPES,
+  VENDOR_DOC_GET_TTL_SECONDS,
+  VENDOR_DOC_MAX_BYTES,
+  VENDOR_DOC_PUT_TTL_SECONDS,
+  type VendorDocContentType,
+  type VendorDocIdInput,
+  type VendorDocScopeInput,
+  vendorDocIdInput,
+  vendorDocScopeInput,
+} from './vendor-docs.shared'
 
 const contentTypeToExtension: Record<VendorDocContentType, string> = {
   'application/pdf': 'pdf',
@@ -74,80 +83,6 @@ const extensionToContentType: Record<string, VendorDocContentType> = {
   png: 'image/png',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Zod schemas
-// ────────────────────────────────────────────────────────────────────────────
-
-export const mintVendorDocUploadInput = z.object({
-  vendorId: z.uuid('Id de fornecedor inválido'),
-  fileName: z.string().trim().min(1, 'Nome do arquivo é obrigatório').max(255),
-  contentType: z.enum(VENDOR_DOC_ALLOWED_CONTENT_TYPES),
-  sizeBytes: z
-    .number()
-    .int('Tamanho deve ser inteiro')
-    .min(1, 'Tamanho mínimo 1 byte')
-    .max(VENDOR_DOC_MAX_BYTES, `Tamanho máximo é ${VENDOR_DOC_MAX_BYTES} bytes (25 MB)`),
-})
-export type MintVendorDocUploadInput = z.infer<typeof mintVendorDocUploadInput>
-
-export const confirmVendorDocUploadInput = z.object({
-  vendorId: z.uuid('Id de fornecedor inválido'),
-  key: z.string().trim().min(1).max(512),
-  docType: z
-    .string()
-    .trim()
-    .min(1, 'Tipo de documento é obrigatório')
-    .max(80, 'Tipo de documento muito longo'),
-})
-export type ConfirmVendorDocUploadInput = z.infer<typeof confirmVendorDocUploadInput>
-
-export const vendorDocScopeInput = z.object({
-  vendorId: z.uuid('Id de fornecedor inválido'),
-})
-export type VendorDocScopeInput = z.infer<typeof vendorDocScopeInput>
-
-export const vendorDocIdInput = z.object({
-  docId: z.uuid('Id de documento inválido'),
-})
-export type VendorDocIdInput = z.infer<typeof vendorDocIdInput>
-
-// ────────────────────────────────────────────────────────────────────────────
-// Result shapes
-// ────────────────────────────────────────────────────────────────────────────
-
-export interface MintVendorDocUploadResult {
-  url: string
-  key: string
-  bucket: string
-  expiresAt: string
-  contentType: VendorDocContentType
-  sizeMaxBytes: number
-}
-
-export interface MintVendorDocDownloadResult {
-  url: string
-  expiresAt: string
-}
-
-export interface ConfirmVendorDocUploadResult {
-  ok: true
-  docId: string
-  key: string
-  size: number
-  contentType: VendorDocContentType
-}
-
-export interface PersistedVendorDoc {
-  id: string
-  tenantId: string
-  vendorId: string
-  minioKey: string
-  contentType: string | null
-  sizeBytes: number | null
-  docType: string
-  uploadedAt: Date
 }
 
 // ────────────────────────────────────────────────────────────────────────────

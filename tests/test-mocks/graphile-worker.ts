@@ -7,21 +7,20 @@
 // The harness reuses the production `taskList` from src/jobs/tasks/index.ts so
 // tests stay coupled to the same task registration the runner uses.
 
-import type { Helpers, JobHelpers, TaskList } from 'graphile-worker';
+import type { Helpers, JobHelpers, TaskList } from 'graphile-worker'
 
 // Minimal subset of graphile-worker's JobHelpers — only what existing
 // Phase 2 tasks consume. Plans 02-03/02-06 will extend if needed.
-export type InlineHelpers = Partial<JobHelpers> &
-  Pick<JobHelpers, 'logger' | 'addJob' | 'job'>;
+export type InlineHelpers = Partial<JobHelpers> & Pick<JobHelpers, 'logger' | 'addJob' | 'job'>
 
 export type InlineHarnessOpts = {
   // Override the production taskList (e.g. inject test-only handlers).
-  taskList?: TaskList;
+  taskList?: TaskList
   // Capture addJob() invocations so tests can assert downstream enqueues.
-  capturedJobs?: Array<{ taskName: string; payload: unknown }>;
+  capturedJobs?: Array<{ taskName: string; payload: unknown }>
   // Custom logger; defaults to no-op.
-  logger?: Helpers['logger'];
-};
+  logger?: Helpers['logger']
+}
 
 const noopLogger: Helpers['logger'] = {
   // graphile-worker's Logger interface has scope/level helpers; the bare
@@ -32,13 +31,9 @@ const noopLogger: Helpers['logger'] = {
   error: () => {},
   // Required helpers — typed loosely; tests rarely call them.
   scope: () => noopLogger,
-} as unknown as Helpers['logger'];
+} as unknown as Helpers['logger']
 
-function buildHelpers(
-  taskName: string,
-  payload: unknown,
-  opts: InlineHarnessOpts
-): InlineHelpers {
+function buildHelpers(taskName: string, payload: unknown, opts: InlineHarnessOpts): InlineHelpers {
   const helpers: InlineHelpers = {
     logger: opts.logger ?? noopLogger,
     job: {
@@ -60,40 +55,40 @@ function buildHelpers(
       flags: null,
     } as unknown as JobHelpers['job'],
     addJob: ((task: string, p: unknown) => {
-      opts.capturedJobs?.push({ taskName: task, payload: p });
-      return Promise.resolve({} as never);
+      opts.capturedJobs?.push({ taskName: task, payload: p })
+      return Promise.resolve({} as never)
     }) as JobHelpers['addJob'],
-  };
-  return helpers;
+  }
+  return helpers
 }
 
 export async function runTaskInline<T = unknown>(
   taskName: string,
   payload: T,
-  opts: InlineHarnessOpts = {}
+  opts: InlineHarnessOpts = {},
 ): Promise<void> {
-  let taskList = opts.taskList;
+  let taskList = opts.taskList
   if (!taskList) {
     // Lazy import the production taskList. If it does not exist yet
     // (Plans 02-03+ create it), throw a clear test-time error.
-    const mod = (await import('@/jobs/tasks/index').catch(() => null)) as
-      | { taskList?: TaskList }
-      | null;
+    const mod = (await import('@/jobs/tasks/index').catch(() => null)) as {
+      taskList?: TaskList
+    } | null
     if (!mod?.taskList) {
       throw new Error(
-        `runTaskInline: src/jobs/tasks/index.ts has no exported taskList yet — Plan 02-03 introduces it.`
-      );
+        `runTaskInline: src/jobs/tasks/index.ts has no exported taskList yet — Plan 02-03 introduces it.`,
+      )
     }
-    taskList = mod.taskList;
+    taskList = mod.taskList
   }
 
-  const task = taskList[taskName];
+  const task = taskList[taskName]
   if (!task) {
     throw new Error(
-      `runTaskInline: task "${taskName}" is not registered in taskList. Known: ${Object.keys(taskList).join(', ')}`
-    );
+      `runTaskInline: task "${taskName}" is not registered in taskList. Known: ${Object.keys(taskList).join(', ')}`,
+    )
   }
 
-  const helpers = buildHelpers(taskName, payload, opts);
-  await task(payload, helpers as unknown as JobHelpers);
+  const helpers = buildHelpers(taskName, payload, opts)
+  await task(payload, helpers as unknown as JobHelpers)
 }

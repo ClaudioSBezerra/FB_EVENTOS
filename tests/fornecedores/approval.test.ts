@@ -15,11 +15,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { pool } from '@/db'
 import { withTenant } from '@/db/with-tenant'
-import {
-  approveVendorInTenant,
-  EMAIL_STATUS_UPDATE_TASK,
-  rejectVendorInTenant,
-} from '@/lib/actions/fornecedores'
+import { approveVendorInTenant, rejectVendorInTenant } from '@/lib/actions/fornecedores'
+import { EMAIL_STATUS_UPDATE_TASK } from '@/lib/actions/fornecedores.shared'
 import { vendorApprovalSchema } from '@/lib/validators/vendor'
 import { appPool, createTenant, insertUser, migratorPool } from '@/test/db'
 import { makeVendor } from '@/test/factories/vendor-factory'

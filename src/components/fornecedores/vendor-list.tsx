@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import type { PersistedVendor } from '@/lib/actions/fornecedores'
+import type { PersistedVendor } from '@/lib/actions/fornecedores.shared'
 import { formatCNPJ } from '@/lib/validators/cnpj'
 
 export interface VendorListProps {

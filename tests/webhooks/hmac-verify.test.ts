@@ -63,7 +63,7 @@ describe('verifyWebhookSignature — tamper detection', () => {
 
     // Tamper: flip one bit in the body
     const tamperedBody = Buffer.from(originalBody)
-    tamperedBody[5] = (tamperedBody[5]! ^ 0x01)
+    tamperedBody[5] = tamperedBody[5]! ^ 0x01
 
     expect(verifyWebhookSignature(tamperedBody, sig, TEST_SECRET)).toBe(false)
   })
