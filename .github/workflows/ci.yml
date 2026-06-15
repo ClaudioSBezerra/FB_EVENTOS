@@ -153,6 +153,7 @@ jobs:
           DATABASE_MIGRATOR_URL: postgresql://fb_migrator:fb_migrator_dev_pw@localhost:5432/fb_eventos_dev
           BETTER_AUTH_SECRET: test-secret-32-chars-minimum-here
           BETTER_AUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
           NEXT_TELEMETRY_DISABLED: 1
 
   # =========================================================================
@@ -220,6 +221,7 @@ jobs:
           DATABASE_MIGRATOR_URL: postgresql://fb_migrator:fb_migrator_dev_pw@localhost:5432/fb_eventos_dev
           BETTER_AUTH_SECRET: test-secret-32-chars-minimum-here
           BETTER_AUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
           NEXT_TELEMETRY_DISABLED: 1
           PLAYWRIGHT_BROWSERS_READY: '1'
 
@@ -265,6 +267,7 @@ jobs:
           DATABASE_MIGRATOR_URL: postgresql://localhost/placeholder
           BETTER_AUTH_SECRET: build-time-placeholder-32-chars-minimum
           BETTER_AUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
 
   # =========================================================================
   # Job 6 — verify-no-latest-in-workflows (T-0-07)

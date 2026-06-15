@@ -41,6 +41,20 @@ const isMigrationTime =
   process.argv.some((a) => a.includes('drizzle-kit')) ||
   process.env.MIGRATION_RUNTIME === '1'
 
+// Build-time / CI skip-hatch. Two contexts need to import this module
+// without runtime secrets being available:
+//   1. `next build` (production webpack pass) — Next.js evaluates Route
+//      Handler modules to collect page data. URLs aren't resolved yet;
+//      Coolify supplies them at container start.
+//   2. CI test job — `.env.local` is gitignored and CI runs with bare
+//      `process.env`. The vitest preflight imports env.ts via @/db.
+// Setting SKIP_ENV_VALIDATION=1 swaps the strict URL/secret checks for
+// permissive `z.string().optional()` so the file parses without crashing.
+// NEVER set this in a runtime container — the Dockerfile sets it ONLY for
+// the `pnpm build` step and explicitly unsets it for the runtime stage.
+const isBuildTime =
+  process.env.SKIP_ENV_VALIDATION === '1' || process.env.NEXT_PHASE === 'phase-production-build'
+
 const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required (fb_eventos_app role, Plan 03)'),
@@ -123,7 +137,24 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>
 
 function parseEnv(): Env {
-  const result = envSchema.safeParse(process.env)
+  // Build-time / CI skip — relax URL and secret checks so the module
+  // parses without crashing when `.env.local` / Coolify runtime secrets
+  // are unavailable. See the `isBuildTime` comment above for context.
+  const schema = isBuildTime
+    ? envSchema.extend({
+        DATABASE_URL: z
+          .string()
+          .optional()
+          .default('postgresql://placeholder:placeholder@localhost:5432/placeholder'),
+        BETTER_AUTH_SECRET: z
+          .string()
+          .optional()
+          .default('build-time-placeholder-secret-not-for-runtime-use-32+chars'),
+        BETTER_AUTH_URL: z.string().optional().default('https://placeholder.invalid'),
+        NEXT_PUBLIC_APP_URL: z.string().optional().default('https://placeholder.invalid'),
+      })
+    : envSchema
+  const result = schema.safeParse(process.env)
   if (!result.success) {
     const issues = result.error.issues
       .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)

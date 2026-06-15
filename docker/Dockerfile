@@ -37,6 +37,12 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Build-time env validation skip — runtime URLs / secrets are provided by
+# Coolify at container start; the build itself cannot see them. The runner
+# stage below does NOT propagate this variable, so strict validation still
+# runs on production container startup. See src/lib/env.ts `isBuildTime`.
+ENV SKIP_ENV_VALIDATION=1
+
 RUN pnpm build
 
 # ─── Stage 3: runner ────────────────────────────────────────────────────────
