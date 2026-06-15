@@ -1,31 +1,41 @@
 # syntax=docker/dockerfile:1.7
 #
-# FB_EVENTOS multi-stage Dockerfile (Phase 0, Plan 01 — Task 3).
-# Produces a Next.js standalone runtime image. Always tag with a semver
-# version from package.json — floating tags are structurally forbidden
-# (T-0-07, CLAUDE.md "Watchtower auto-pulling floating tag"). The pre-commit
-# hook + CI grep guard enforce this.
+# FB_EVENTOS unified multi-stage Dockerfile (Phase 0 Plan 01 + Plan 07).
 #
-# Build command (also wired as `pnpm docker:build:local`):
-#   docker build \
+# Produces TWO runtime images from a SINGLE shared build pipeline:
+#   - target `web-runner`     → Next.js standalone server (port 3000)
+#   - target `worker-runner`  → Graphile-Worker process (no port)
+#
+# Why unified: docker-compose builds web + worker in parallel by default,
+# which doubled `pnpm install` + Next.js build memory usage and tripped
+# Coolify OOM during demo deploy (2026-06-15 23:51 deploy log:
+# exit 255 mid-`COPY --from=deps` on the worker stage). With a unified
+# Dockerfile, buildkit deduplicates the `deps` + `builder` stages between
+# the two targets and runs them ONCE.
+#
+# Build commands:
+#   docker build -f docker/Dockerfile --target web-runner    \
 #     --build-arg APP_VERSION=$(node -p "require('./package.json').version") \
-#     -t ghcr.io/<org>/fb-eventos-web:$(node -p "require('./package.json').version") \
-#     -f docker/Dockerfile .
+#     -t ghcr.io/<org>/fb-eventos-web:<ver> .
+#   docker build -f docker/Dockerfile --target worker-runner \
+#     -t ghcr.io/<org>/fb-eventos-worker:<ver> .
 #
-# Requires: next.config.ts → output: 'standalone'
+# Floating tags are contractually banned (T-0-07, CLAUDE.md).
+# Requires: next.config.ts → output: 'standalone'.
 
 # ─── Stage 1: deps ──────────────────────────────────────────────────────────
-# Install pnpm + dependencies only. Cached aggressively in CI.
+# Install pnpm + dependencies. Shared by web + worker builders.
 FROM node:22-alpine AS deps
 WORKDIR /app
 
-# Enable corepack so the pinned pnpm version from package.json is used.
 RUN corepack enable
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ─── Stage 2: builder ───────────────────────────────────────────────────────
+# Build BOTH the Next.js standalone server AND the worker TypeScript bundle
+# in one pass. Each runner stage cherry-picks the artifacts it needs.
 FROM node:22-alpine AS builder
 WORKDIR /app
 
@@ -39,14 +49,20 @@ ENV NODE_ENV=production
 
 # Build-time env validation skip — runtime URLs / secrets are provided by
 # Coolify at container start; the build itself cannot see them. The runner
-# stage below does NOT propagate this variable, so strict validation still
+# stages below do NOT propagate this variable, so strict validation still
 # runs on production container startup. See src/lib/env.ts `isBuildTime`.
 ENV SKIP_ENV_VALIDATION=1
 
+# Web: produces .next/standalone + .next/static.
 RUN pnpm build
 
-# ─── Stage 3: runner ────────────────────────────────────────────────────────
-FROM node:22-alpine AS runner
+# Worker: produces dist-worker/ (compiled by tsconfig.worker.json — only
+# src/jobs/**, scripts/jobs/**, src/lib/**, src/db/**, src/auth/server.ts).
+RUN pnpm build:worker
+
+# ─── Stage 3a: web-runner ──────────────────────────────────────────────────
+# Next.js standalone server. Port 3000. Healthcheck via /api/health.
+FROM node:22-alpine AS web-runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -55,11 +71,9 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV TZ=America/Sao_Paulo
 
-# Drop privileges. Next.js standalone server.js does not need root.
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs
 
-# Standalone build output: contains a minimal node_modules + server.js.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public          ./public
@@ -68,19 +82,43 @@ USER nextjs
 
 EXPOSE 3000
 
-# /api/health is created in Plan 07 (walking-skeleton + Coolify deploy).
-# Until then the healthcheck is allowed to fail on first boot — that is
-# intentional and resolves once Plan 07 ships.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget -qO- http://localhost:3000/api/health || exit 1
 
-# Image must be tagged with a semver at build time (see header).
-# NEVER use a floating tag (T-0-07; CLAUDE.md "What NOT to Use").
 ARG APP_VERSION=0.0.0-unset
 ENV APP_VERSION=${APP_VERSION}
 LABEL org.opencontainers.image.title="fb-eventos-web"
 LABEL org.opencontainers.image.version="${APP_VERSION}"
-LABEL org.opencontainers.image.source="https://github.com/fb-eventos/fb-eventos"
-LABEL org.opencontainers.image.licenses="Proprietary"
 
 CMD ["node", "server.js"]
+
+# ─── Stage 3b: worker-runner ───────────────────────────────────────────────
+# Graphile-Worker process. No port. Drains in-flight jobs on SIGTERM.
+FROM node:22-alpine AS worker-runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV TZ=America/Sao_Paulo
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 worker
+
+COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=worker:nodejs /app/dist-worker  ./dist-worker
+# Ship migrations so graphile-worker installs its schema on first boot.
+COPY --from=builder --chown=worker:nodejs /app/src/db/migrations ./src/db/migrations
+COPY --from=builder --chown=worker:nodejs /app/package.json ./package.json
+
+USER worker
+
+ARG APP_VERSION=0.0.0-unset
+ENV APP_VERSION=${APP_VERSION}
+LABEL org.opencontainers.image.title="fb-eventos-worker"
+LABEL org.opencontainers.image.version="${APP_VERSION}"
+
+CMD ["node", "dist-worker/scripts/jobs/start-worker.js"]
+
+# ─── Default target alias for backwards compatibility ──────────────────────
+# `docker build -f docker/Dockerfile .` without --target produces web-runner
+# (matches Plan 01 behavior; docker-compose.yml uses explicit targets).
+FROM web-runner AS runner

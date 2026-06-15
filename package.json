@@ -36,7 +36,7 @@
     "worker:start": "node dist-worker/scripts/jobs/start-worker.js",
     "build:worker": "tsc -p tsconfig.worker.json",
     "docker:build:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-web:$(node -p \"require('./package.json').version\") -f docker/Dockerfile .",
-    "docker:build:worker:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-worker:$(node -p \"require('./package.json').version\") -f docker/Dockerfile.worker ."
+    "docker:build:worker:local": "docker build --build-arg APP_VERSION=$(node -p \"require('./package.json').version\") -t fb-eventos-worker:$(node -p \"require('./package.json').version\") --target worker-runner -f docker/Dockerfile ."
   },
   "dependencies": {
     "@hookform/resolvers": "~5.4.0",

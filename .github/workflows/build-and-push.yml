@@ -63,6 +63,7 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile
+          target: web-runner
           push: true
           # DO NOT add a floating registry tag here — contractual ban
           # (CLAUDE.md / T-0-07). The semver tag and the commit SHA are
@@ -81,7 +82,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/Dockerfile.worker
+          file: docker/Dockerfile
+          target: worker-runner
           push: true
           tags: |
             ghcr.io/${{ env.REPO_LC }}-worker:${{ env.APP_VERSION }}

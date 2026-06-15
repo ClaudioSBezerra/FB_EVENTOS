@@ -29,6 +29,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+      target: web-runner
       args:
         APP_VERSION: ${APP_VERSION:-0.1.0}
     container_name: fb-eventos-web
@@ -106,7 +107,8 @@ services:
   worker:
     build:
       context: .
-      dockerfile: docker/Dockerfile.worker
+      dockerfile: docker/Dockerfile
+      target: worker-runner
       args:
         APP_VERSION: ${APP_VERSION:-0.1.0}
     container_name: fb-eventos-worker
