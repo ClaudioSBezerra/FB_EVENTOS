@@ -11,6 +11,12 @@
 //        → used by the webhook handler as belt-and-suspenders re-fetch
 //          defense (trust the API status over the webhook payload)
 //
+// Phase 2 additions (Plan 02-05):
+//
+//   3. cancelCharge(chargeId, opts?)
+//        → DELETE /core/v5/charges/:id
+//        → cancel or partial-refund a charge (AM-04)
+//
 // AUTH (Pagar.me v5 documented contract — RESEARCH §A8 + §Pitfall):
 //   - HTTP Basic Auth header.
 //   - Username = secret key (sk_test_* sandbox / sk_* production).
@@ -32,7 +38,9 @@ import {
   PagarmeNotConfiguredError,
   type PagarmeOrderCreateRequest,
   type PagarmeOrderResponse,
+  type PagarmeRefundResponse,
   pagarmeOrderResponseSchema,
+  pagarmeRefundResponseSchema,
 } from './types'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -127,4 +135,42 @@ export async function getOrder(orderId: string): Promise<PagarmeOrderResponse> {
   }
   const json = await res.json()
   return pagarmeOrderResponseSchema.parse(json)
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// cancelCharge — DELETE /core/v5/charges/:id (AM-04)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * DELETE /core/v5/charges/:id — cancel or partially refund a charge.
+ *
+ * - Full cancel: call without `opts.amount`.
+ * - Partial refund: pass `opts.amount` in centavos (R$ × 100).
+ *
+ * Both full and partial variants hit the same DELETE endpoint. Pagar.me v5
+ * docs confirm: partial refund = DELETE with `{ amount: N }` body.
+ *
+ * @throws PagarmeNotConfiguredError when PAGARME_SECRET_KEY is missing.
+ * @throws PagarmeApiError on non-2xx response.
+ */
+export async function cancelCharge(
+  chargeId: string,
+  opts?: { amount?: number },
+): Promise<PagarmeRefundResponse> {
+  const hasBody = typeof opts?.amount === 'number'
+  const res = await fetch(`${getPagarmeBaseUrl()}/charges/${encodeURIComponent(chargeId)}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: buildAuthHeader(),
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: hasBody ? JSON.stringify({ amount: opts!.amount }) : undefined,
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new PagarmeApiError(res.status, text)
+  }
+  const json = await res.json()
+  return pagarmeRefundResponseSchema.parse(json)
 }

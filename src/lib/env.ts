@@ -107,6 +107,12 @@ const envSchema = z.object({
   // https://eventos.fbtax.cloud/api/webhooks/pagarme
   PAGARME_WEBHOOK_USER: z.string().optional(),
   PAGARME_WEBHOOK_PASS: z.string().optional(),
+  // HMAC signing secret for webhook verification (Phase 2, Plan 02-05 — AM-02).
+  // Obtain from Pagar.me dashboard → Configurações → Webhooks → Signing Secret.
+  // ⚠️ PROBE PENDING: Run tests/probes/pagarme-hmac-header-probe.test.ts to
+  // confirm X-Hub-Signature header name + base64 encoding before production deploy.
+  // See docs/adr/0005-webhook-hmac-strategy.md for the full HMAC contract.
+  PAGARME_WEBHOOK_SIGNING_SECRET: z.string().optional(),
 
   // App
   NEXT_PUBLIC_APP_URL: z.url('NEXT_PUBLIC_APP_URL must be a valid URL'),
