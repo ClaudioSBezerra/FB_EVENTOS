@@ -1,0 +1,210 @@
+# FB_EVENTOS — Coolify production stack (Phase 1 demo, Plan 07).
+#
+# Single-stack deploy: Coolify clones this repo and runs
+# `docker compose up -d` to bring web + worker + postgres + minio + mailpit
+# online together. Mirrors the FB_APU04 docker-compose.prod.yml pattern.
+#
+# All ${VAR} placeholders are injected by Coolify from its env UI at deploy
+# time — see docs/deploy/DEPLOY-v0.1.0-DEMO.md for the canonical env list
+# and the operator-substitution table.
+#
+# DESIGN NOTES:
+#   - Postgres + MinIO live in this compose (not as separate Coolify Resources)
+#     so the demo deploy is a single button-click. For a real piloto you
+#     should promote them to dedicated Coolify-managed databases for snapshot
+#     tooling + zero-downtime failover.
+#   - APP_VERSION is passed as a build-arg so the runtime can echo it at
+#     /api/health (Plan 07). Git tag drives the version via Coolify CI hooks.
+#   - Image tags are pinned (no `:latest`) — contractual ban from CLAUDE.md.
+#   - The `web` service runs migrations as part of its entrypoint via the
+#     Coolify Pre-Deploy hook (see docs/coolify/web.service.md).
+#   - Traefik labels live in the Coolify service UI (NOT in this file) so
+#     the operator can swap host names without touching Git.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Next.js web — public-facing app server
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-0.1.0}
+    container_name: fb-eventos-web
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Database (NOBYPASSRLS runtime role)
+      DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD}@postgres:5432/fb_eventos_dev
+      # Migrator DSN (DDL-capable role — webhook tenant lookup + pre-deploy migrations)
+      DATABASE_MIGRATOR_URL: postgresql://fb_migrator:${FB_MIGRATOR_PASSWORD}@postgres:5432/fb_eventos_dev
+
+      # Auth — Better Auth
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://eventos.fbtax.cloud}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://eventos.fbtax.cloud}
+
+      # SMTP (Hostinger)
+      SMTP_HOST: ${SMTP_HOST:-smtp.hostinger.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_FROM: ${SMTP_FROM:-FB_EVENTOS <no-reply@eventos.fbtax.cloud>}
+
+      # MinIO — internal endpoint (web → minio inside this network)
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_USE_SSL: "false"
+      MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET:-fb-eventos}
+      # Public endpoint embedded in pre-signed URLs delivered to the browser
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-https://minio.eventos.fbtax.cloud}
+
+      # Pagar.me (sandbox for demo)
+      PAGARME_SECRET_KEY: ${PAGARME_SECRET_KEY:-sk_test_placeholder}
+      PAGARME_ENV: ${PAGARME_ENV:-sandbox}
+      PAGARME_WEBHOOK_USER: ${PAGARME_WEBHOOK_USER:-}
+      PAGARME_WEBHOOK_PASS: ${PAGARME_WEBHOOK_PASS:-}
+      PAGARME_WEBHOOK_SIGNING_SECRET: ${PAGARME_WEBHOOK_SIGNING_SECRET:-placeholder}
+
+      # ZapSign (Phase 1 contratos)
+      ZAPSIGN_TOKEN: ${ZAPSIGN_TOKEN:-}
+      ZAPSIGN_ENV: ${ZAPSIGN_ENV:-sandbox}
+      ZAPSIGN_WEBHOOK_USER: ${ZAPSIGN_WEBHOOK_USER:-}
+      ZAPSIGN_WEBHOOK_PASS: ${ZAPSIGN_WEBHOOK_PASS:-}
+
+      # Observability
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Runtime
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Graphile-Worker — background jobs (email send, outbox drain, reservation
+  # expire, payment webhook processing). No HTTP listener.
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+      args:
+        APP_VERSION: ${APP_VERSION:-0.1.0}
+    container_name: fb-eventos-worker
+    restart: always
+    environment:
+      # Same env as web — the worker shares the env loader (src/lib/env.ts)
+      DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD}@postgres:5432/fb_eventos_dev
+      DATABASE_MIGRATOR_URL: postgresql://fb_migrator:${FB_MIGRATOR_PASSWORD}@postgres:5432/fb_eventos_dev
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://eventos.fbtax.cloud}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://eventos.fbtax.cloud}
+      SMTP_HOST: ${SMTP_HOST:-smtp.hostinger.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_FROM: ${SMTP_FROM:-FB_EVENTOS <no-reply@eventos.fbtax.cloud>}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_USE_SSL: "false"
+      MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET:-fb-eventos}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-https://minio.eventos.fbtax.cloud}
+      PAGARME_SECRET_KEY: ${PAGARME_SECRET_KEY:-sk_test_placeholder}
+      PAGARME_ENV: ${PAGARME_ENV:-sandbox}
+      PAGARME_WEBHOOK_SIGNING_SECRET: ${PAGARME_WEBHOOK_SIGNING_SECRET:-placeholder}
+      ZAPSIGN_TOKEN: ${ZAPSIGN_TOKEN:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 — single source of truth (contractual ban on embedded DBs).
+  # See CLAUDE.md "Embedded-DB Anti-Pattern" + Plan 03 RLS contract.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: fb-eventos-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: postgres
+      # Forwarded into the init scripts (scripts/db/init/01-roles.sql) so
+      # the role passwords come from Coolify env UI rather than committed
+      # placeholders.
+      FB_APP_PASSWORD: ${FB_APP_PASSWORD}
+      FB_MIGRATOR_PASSWORD: ${FB_MIGRATOR_PASSWORD}
+    command:
+      - postgres
+      - -c
+      - timezone=America/Sao_Paulo
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=256MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Auto-bootstrap roles, login users, extensions on first volume init.
+      # docker-entrypoint-initdb.d is a Postgres image convention — every
+      # .sql / .sh file runs in alphabetical order as the superuser.
+      - ./scripts/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # MinIO — S3-compatible object storage (planta PDF/JPG, vendor docs, contracts)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+    container_name: fb-eventos-minio
+    restart: always
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_PUBLIC_ENDPOINT:-https://minio.eventos.fbtax.cloud}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "wget -qO- http://localhost:9000/minio/health/live > /dev/null 2>&1 || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  minio_data:

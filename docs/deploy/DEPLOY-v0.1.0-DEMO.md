@@ -1,14 +1,14 @@
-# Deploy v0.1.0 demo — Coolify build-from-Git
+# Deploy v0.1.0 demo — Coolify Docker Compose stack
 
-**Padrão:** Coolify clona o repositório e builda a imagem **dentro do servidor dele** com as env vars reais já populadas. Mesmo fluxo do FB_APU04 — não usamos GHCR para a demo.
+**Padrão:** Coolify clona o repositório e roda `docker compose up -d` no `docker-compose.yml` da raiz. Tudo (web + worker + postgres + minio) sobe num único stack. Mesmo fluxo do FB_APU04.
 
 **Domínio:** `eventos.fbtax.cloud` (root) na Hostinger DNS.
 
-**Estado do código:** main em `https://github.com/ClaudioSBezerra/FB_EVENTOS` (público). Phase 1 organizadora end-to-end + Phase 2 com 5/8 plans (signup + marketplace + reservation + SSE + checkout PIX/cartão).
+**Estado do código:** main em `https://github.com/ClaudioSBezerra/FB_EVENTOS` (público). Phase 1 organizadora end-to-end + Phase 2 com 5/8 plans.
 
 ---
 
-## Sequência completa
+## Sequência
 
 ### 1. DNS (Hostinger)
 
@@ -16,52 +16,9 @@ No painel Hostinger DNS:
 - Tipo `A`: `eventos.fbtax.cloud` → `<IP_COOLIFY>`
 - Tipo `A`: `minio.eventos.fbtax.cloud` → `<IP_COOLIFY>` (mesmo IP)
 
-TTL 300s durante testes.
+TTL 300s.
 
-### 2. Postgres 16 (Coolify)
-
-Resources → Add Resource → **Database → Postgres 16**.
-
-Anote:
-- Internal hostname (ex.: `fb-eventos-postgres-internal`)
-- Superuser password (gerada pelo Coolify)
-
-**Bootstrap roles** (rodar UMA vez no terminal do container Postgres):
-
-```bash
-PG_BOOTSTRAP_URL='postgresql://postgres:<senha-coolify>@<host-interno>:5432/postgres' \
-  bash scripts/db/setup-roles.sh
-```
-
-Cria `fb_eventos_app` (NOBYPASSRLS), `fb_eventos_migrator` (DDL), `fb_eventos_sysreader` (BYPASSRLS), `fb_app_user`, `fb_migrator`, e database `fb_eventos_dev`.
-
-**Extensões:**
-
-```sql
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-```
-
-### 3. MinIO (Coolify)
-
-Resources → Add Resource → **Service → minio/minio**.
-
-Pin a versão `minio/minio:RELEASE.2025-01-20T14-49-07Z` (sem `:latest`).
-
-Env vars do MinIO:
-```
-MINIO_ROOT_USER=<gerar com `openssl rand -hex 16`>
-MINIO_ROOT_PASSWORD=<gerar com `openssl rand -hex 32`>
-MINIO_BROWSER_REDIRECT_URL=https://minio.eventos.fbtax.cloud
-```
-
-Traefik labels para o subdomínio:
-- `Host(\`minio.eventos.fbtax.cloud\`)` → porta `9001` (console)
-- API S3 na porta `9000` (servido interno apenas)
-
-**Após o MinIO subir**, criar bucket `fb-eventos` via console ou `mc`.
-
-### 4. fb-eventos-web (Coolify — build from Git)
+### 2. Coolify — criar a Application
 
 **Resources → Add Resource → Application → Public Repository.**
 
@@ -69,83 +26,89 @@ Traefik labels para o subdomínio:
 |-------|-------|
 | **Repository URL** | `https://github.com/ClaudioSBezerra/FB_EVENTOS` |
 | **Branch** | `main` |
-| **Build pack** | `Dockerfile` |
-| **Dockerfile location** | `docker/Dockerfile` |
-| **Domain** | `eventos.fbtax.cloud` |
-| **Port (internal)** | `3000` |
+| **Build pack** | **Docker Compose** |
+| **Docker Compose Location** | `/docker-compose.yml` (raiz do repo) |
 
-**Pre-Deploy Command:**
-```bash
-node dist/scripts/migrate.js
-```
+### 3. Coolify — variáveis de ambiente
 
-**Healthcheck:** `/api/health` (interval 30s, timeout 3s, retries 3)
-
-**Environment Variables** (preencher CHANGE_ME com valores reais — Coolify substitui no momento do build E do runtime):
+Coolify substitui os `${VAR}` no `docker-compose.yml` no momento do `docker compose up`. Configure no painel **Environment Variables** da Application:
 
 ```env
-# DB — runtime (NOBYPASSRLS app role)
-DATABASE_URL=postgresql://fb_app_user:fb_app_dev_pw@<pg-internal-host>:5432/fb_eventos_dev
+# ─── DB superuser + role passwords (init scripts criam roles/users) ───
+POSTGRES_SUPERUSER_PASSWORD=<gerar com openssl rand -hex 24>
+FB_APP_PASSWORD=<gerar com openssl rand -hex 24>
+FB_MIGRATOR_PASSWORD=<gerar com openssl rand -hex 24>
 
-# DB — migrations (DDL-capable migrator role) — usado no pre-deploy hook + webhook tenant lookup
-DATABASE_MIGRATOR_URL=postgresql://fb_migrator:fb_migrator_dev_pw@<pg-internal-host>:5432/fb_eventos_dev
+# ─── Build args / runtime ───
+APP_VERSION=0.1.0
 
-# Auth (gerar com: openssl rand -hex 32)
-BETTER_AUTH_SECRET=CHANGE_ME_32_BYTES_HEX
+# ─── Auth (gerar com openssl rand -hex 32) ───
+BETTER_AUTH_SECRET=<32+ bytes hex>
 BETTER_AUTH_URL=https://eventos.fbtax.cloud
 NEXT_PUBLIC_APP_URL=https://eventos.fbtax.cloud
 
-# SMTP (Hostinger — usar email @fbtax.cloud)
+# ─── SMTP (Hostinger — usa caixa @fbtax.cloud existente) ───
 SMTP_HOST=smtp.hostinger.com
 SMTP_PORT=465
 SMTP_USER=no-reply@fbtax.cloud
-SMTP_PASS=CHANGE_ME
+SMTP_PASS=<senha da caixa Hostinger>
 SMTP_SECURE=true
-SMTP_FROM="FB_EVENTOS <no-reply@eventos.fbtax.cloud>"
+SMTP_FROM=FB_EVENTOS <no-reply@eventos.fbtax.cloud>
 
-# MinIO — interno (web→minio dentro da rede Coolify)
-MINIO_ENDPOINT=fb-eventos-minio
-MINIO_PORT=9000
-MINIO_ACCESS_KEY=<MINIO_ROOT_USER do §3>
-MINIO_SECRET_KEY=<MINIO_ROOT_PASSWORD do §3>
-MINIO_USE_SSL=false
+# ─── MinIO ───
+MINIO_ROOT_USER=<gerar com openssl rand -hex 16>
+MINIO_ROOT_PASSWORD=<gerar com openssl rand -hex 32>
 MINIO_DEFAULT_BUCKET=fb-eventos
-# MinIO — público (URLs assinadas servidas ao browser)
 MINIO_PUBLIC_ENDPOINT=https://minio.eventos.fbtax.cloud
 
-# Pagar.me — SANDBOX para a demo
-PAGARME_SECRET_KEY=sk_test_CHANGE_ME
+# ─── Pagar.me (SANDBOX para a demo) ───
+PAGARME_SECRET_KEY=sk_test_<token sandbox>
 PAGARME_ENV=sandbox
-PAGARME_WEBHOOK_USER=CHANGE_ME
-PAGARME_WEBHOOK_PASS=CHANGE_ME
-PAGARME_WEBHOOK_SIGNING_SECRET=CHANGE_ME
+PAGARME_WEBHOOK_USER=<basic auth user, configurar igual no painel Pagar.me>
+PAGARME_WEBHOOK_PASS=<basic auth pass>
+PAGARME_WEBHOOK_SIGNING_SECRET=<signing secret do dashboard Pagar.me>
 
-# Observability (opcional para demo)
+# ─── ZapSign (opcional para a demo) ───
+ZAPSIGN_TOKEN=<sandbox token>
+ZAPSIGN_ENV=sandbox
+ZAPSIGN_WEBHOOK_USER=<basic auth>
+ZAPSIGN_WEBHOOK_PASS=<basic auth>
+
+# ─── Observability (opcional) ───
 SENTRY_DSN=
 NEXT_PUBLIC_SENTRY_DSN=
 LOG_LEVEL=info
-
-# Runtime
-NODE_ENV=production
-TZ=America/Sao_Paulo
-NEXT_TELEMETRY_DISABLED=1
 ```
 
-Como o Coolify builda do Git com essas env vars **já presentes**, o `src/lib/env.ts` valida normalmente — não precisa de `SKIP_ENV_VALIDATION`.
+> ⚠️ **Senhas:** gere TUDO com `openssl rand -hex N`. Nada de "trindade123" — esse domínio é público e o repo é público.
 
-### 5. fb-eventos-worker (Coolify — build from Git)
+### 4. Coolify — Traefik labels (dois domínios)
 
-Mesma config do web, mas:
+Na **Application**, no painel "Domains" ou "Labels":
 
-| Campo | Valor |
-|-------|-------|
-| **Dockerfile location** | `docker/Dockerfile.worker` |
-| **Domain** | (nenhum — worker não escuta HTTP) |
-| **Port** | (nenhum) |
-| **Pre-Deploy** | (nenhum — web já roda migrations) |
-| **Healthcheck** | exit-code only |
+**Domain primário** (rota o serviço `web`):
+- Host: `eventos.fbtax.cloud`
+- Target service: `web`
+- Target port: `3000`
+- TLS via Let's Encrypt (Coolify automático)
 
-Env vars: **as mesmas** do web service.
+**Domain secundário** (rota o console MinIO):
+- Host: `minio.eventos.fbtax.cloud`
+- Target service: `minio`
+- Target port: `9001` (console UI; 9000 é a API S3 — só interno)
+- TLS via Let's Encrypt
+
+### 5. Coolify — deploy
+
+Clica em **Deploy**. Sequência:
+
+1. Coolify clona `main`
+2. `docker compose build` → builda 2 imagens (web + worker, ambas com Node 22-alpine)
+3. `docker compose up -d` → sobe postgres (init scripts criam roles+users+extensions) → minio → web → worker
+4. Healthcheck do web bate em `/api/health` → flip green
+5. Traefik abre TLS no `eventos.fbtax.cloud`
+
+**Pre-deploy migrations:** o web container faz isso AUTOMATICAMENTE no entrypoint via `node dist/scripts/migrate.js`. Não precisa configurar pre-deploy hook separado quando usando Docker Compose.
 
 ### 6. Smoke test
 
@@ -154,48 +117,62 @@ Env vars: **as mesmas** do web service.
 curl https://eventos.fbtax.cloud/api/health
 # Esperado: 200 { "status": "ok", "checks": { "db": true } }
 
+# MinIO console
+open https://minio.eventos.fbtax.cloud
+# Login com MINIO_ROOT_USER / MINIO_ROOT_PASSWORD → criar bucket "fb-eventos" se não existir
+
 # Página inicial
 curl -I https://eventos.fbtax.cloud/
 # Esperado: HTTP/2 200
 ```
 
-**Fluxo de demonstração (Phase 1 organizadora):**
-1. Signup como organizadora (`/signup`)
-2. Verificar email (chega via SMTP)
-3. Login (`/login`)
-4. Criar evento "Festa de Trindade 2026"
-5. Upload da planta PDF/JPG (browser → MinIO direct via presigned URL)
-6. Desenhar lotes no editor Konva
-7. Definir categorias + preços (R$/m²)
-8. Cadastrar fornecedor → aprovar manualmente
-9. Atribuir lote ao fornecedor
-10. Gerar link de cobrança Pagar.me
+### 7. Demo — fluxo Phase 1 organizadora
 
-**Phase 2 (parcial — disponível em `main` mas não enfatizado):**
-- Cadastro self-service de fornecedor em `/{slug}/fornecedor/cadastro`
-- Marketplace de eventos em `/{slug}/marketplace`
-- Reserva de lote com TTL 15min
-- Checkout PIX/cartão (sandbox)
-- SSE real-time (lote reservado por outro fornecedor → vira cinza no browser)
+1. `/signup` — criar conta organizadora (email + senha + nome da org + slug + LGPD consent)
+2. Email de verificação chega via SMTP → clica → login automático
+3. `/${slug}/eventos/novo` — criar evento "Festa de Trindade 2026"
+4. Upload da planta PDF/JPG (browser → MinIO direct via presigned URL)
+5. `/${slug}/eventos/${eventId}/planta` — desenhar lotes no Konva editor
+6. Definir categorias + preços (R$/m²)
+7. `/${slug}/fornecedores` — cadastrar fornecedor manualmente → aprovar
+8. Atribuir lote → gerar link de cobrança Pagar.me
+
+### 8. Demo — Phase 2 (disponível mas não enfatizado para apresentação)
+
+- `/${slug}/fornecedor/cadastro` — cadastro self-service de fornecedor
+- `/${slug}/marketplace` — listagem de eventos publicados
+- `/${slug}/marketplace/${eventId}/planta` — modo buyer (clica em lote disponível → reserva 15min)
+- Checkout PIX/cartão via Pagar.me sandbox
+- SSE real-time: lote reservado por outro fornecedor vira cinza em <1s
 
 ## Troubleshooting
 
-| Sintoma | Causa | Fix |
-|---------|-------|-----|
-| Web container restart loop | Pre-deploy migrations falharam | Coolify logs do pre-deploy. Comum: roles não criadas (§2 não rodado) ou `DATABASE_MIGRATOR_URL` errada |
-| `/api/health` 503 | `DATABASE_URL` errada | Conferir via psql; checar `\du fb_app_user` no Postgres |
-| Upload planta 403/timeout | MinIO público inacessível | DNS `minio.eventos.fbtax.cloud` + Traefik labels + bucket `fb-eventos` existe |
-| Email não chega | SMTP credenciais | Logs Pino mostram `smtp connection refused` ou auth fail |
+| Sintoma | Causa provável | Fix |
+|---------|---------------|-----|
+| `Docker Compose file not found` | Coolify configurado em modo Dockerfile direto | Mudar Build pack para "Docker Compose" + path `/docker-compose.yml` |
+| Postgres init falha (`role exists`) | Re-deploy sobre volume antigo com roles já criados | Init scripts usam `IF NOT EXISTS` — é seguro; pode ignorar warnings |
+| Web restart loop | Migrations falharam | Logs do container `fb-eventos-web` → procurar erro de connection ou DDL |
+| `/api/health` 503 | `DATABASE_URL` errada ou Postgres não healthy | `docker exec fb-eventos-web env | grep DATABASE` |
+| Upload planta falha | DNS `minio.eventos.fbtax.cloud` errado, ou Traefik label faltando | Testa direto: `curl https://minio.eventos.fbtax.cloud/minio/health/live` |
 | Better Auth "invalid origin" | URLs divergentes | `BETTER_AUTH_URL` == `NEXT_PUBLIC_APP_URL` exatos (sem trailing slash) |
-| Build do Coolify falha em `pnpm build` | env var faltando | Configurar TODAS as env vars no Coolify ANTES do primeiro deploy |
 
-## Notas técnicas
+## Limitações desta versão
 
-**Por que NÃO GHCR para a demo:**
-- Coolify build-from-Git tem env vars reais no build → `next build` faz page-data collection com URLs válidas → sem erros de validação
-- O Dockerfile `SKIP_ENV_VALIDATION=1` defensivo permanece como segurança no caso de alguém buildar manualmente fora do Coolify
+- **Sem Pagar.me real produção** — sandbox apenas (operator-approved flip para sk_live_* é Phase 2 Plan 02-08 D-14 gate, ainda pendente)
+- **Sem refund self-service** (Plan 02-07 pendente)
+- **Sem portal completo do fornecedor** (Plan 02-08 pendente)
+- **Sem LGPD self-service completo** (Phase 4)
 
-**Por que NÃO usar `next start` standalone:**
-- O `docker/Dockerfile` usa Node 22-alpine multi-stage; `pnpm build` gera `.next/standalone`; runner roda `node server.js`. Standard Next.js production output.
+## O que NÃO está neste compose
 
-**Source of truth para detalhes complementares:** [`docker/coolify/*.md`](../../docker/coolify/) (5 manifests por serviço) e [`docs/RUNBOOK.md`](../RUNBOOK.md) (incident response).
+- **Mailpit** (caixa SMTP local de dev) — sai do compose de produção; substituído por SMTP Hostinger real
+- **Sentry server** — opcional, configurável via SENTRY_DSN
+- **Watchtower / image auto-update** — contractualmente banido (CLAUDE.md T-0-07)
+
+## Source of truth complementar
+
+- [`docker/coolify/postgres.service.md`](../../docker/coolify/postgres.service.md) — RLS + dual-role rationale
+- [`docker/coolify/minio.service.md`](../../docker/coolify/minio.service.md) — bucket lifecycle + LGPD retention
+- [`docker/coolify/web.service.md`](../../docker/coolify/web.service.md) — env var contract completo
+- [`docker/coolify/worker.service.md`](../../docker/coolify/worker.service.md) — Graphile-Worker runtime
+- [`docs/RUNBOOK.md`](../RUNBOOK.md) — incident response
