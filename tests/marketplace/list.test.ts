@@ -14,11 +14,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import { pool } from '@/db'
 import { withTenant } from '@/db/with-tenant'
-import {
-  listOpenEventsInTenant,
-  getOpenEventByIdInTenant,
-  type MarketplaceEvent,
-} from '@/lib/actions/marketplace'
+import { listOpenEventsInTenant, type MarketplaceEvent } from '@/lib/actions/marketplace'
 import { appPool, createTenant, migratorPool } from '@/test/db'
 import { makeEvent } from '@/test/factories/event-factory'
 
@@ -56,9 +52,7 @@ describe('FORN-02: marketplace event listing', () => {
     await makeEvent(tenantAId, { status: 'published', name: 'Evento Publicado A' })
     await makeEvent(tenantAId, { status: 'draft', name: 'Evento Rascunho A' })
 
-    const items = await withTenant(tenantAId, async (db) =>
-      listOpenEventsInTenant(db, tenantAId),
-    )
+    const items = await withTenant(tenantAId, async (db) => listOpenEventsInTenant(db, tenantAId))
 
     expect(items).toHaveLength(1)
     expect(items[0]?.name).toBe('Evento Publicado A')
@@ -69,16 +63,12 @@ describe('FORN-02: marketplace event listing', () => {
     await makeEvent(tenantBId, { status: 'published', name: 'Evento de B' })
 
     // Under tenant_B context, only tenant_B events are visible (RLS enforced)
-    const itemsB = await withTenant(tenantBId, async (db) =>
-      listOpenEventsInTenant(db, tenantBId),
-    )
+    const itemsB = await withTenant(tenantBId, async (db) => listOpenEventsInTenant(db, tenantBId))
     expect(itemsB).toHaveLength(1)
     expect(itemsB[0]?.name).toBe('Evento de B')
 
     // Under tenant_A context, only tenant_A events are visible
-    const itemsA = await withTenant(tenantAId, async (db) =>
-      listOpenEventsInTenant(db, tenantAId),
-    )
+    const itemsA = await withTenant(tenantAId, async (db) => listOpenEventsInTenant(db, tenantAId))
     expect(itemsA).toHaveLength(1)
     expect(itemsA[0]?.name).toBe('Evento de A')
   })
@@ -87,9 +77,7 @@ describe('FORN-02: marketplace event listing', () => {
     await makeEvent(tenantAId, { status: 'draft', name: 'Rascunho 1' })
     await makeEvent(tenantAId, { status: 'draft', name: 'Rascunho 2' })
 
-    const items = await withTenant(tenantAId, async (db) =>
-      listOpenEventsInTenant(db, tenantAId),
-    )
+    const items = await withTenant(tenantAId, async (db) => listOpenEventsInTenant(db, tenantAId))
     expect(items).toHaveLength(0)
   })
 
@@ -97,9 +85,7 @@ describe('FORN-02: marketplace event listing', () => {
     const evA = await makeEvent(tenantAId, { status: 'published', name: 'Event A Published' })
     const evB = await makeEvent(tenantBId, { status: 'published', name: 'Event B Published' })
 
-    const itemsA = await withTenant(tenantAId, async (db) =>
-      listOpenEventsInTenant(db, tenantAId),
-    )
+    const itemsA = await withTenant(tenantAId, async (db) => listOpenEventsInTenant(db, tenantAId))
 
     const ids = itemsA.map((e: MarketplaceEvent) => e.id)
     expect(ids).toContain(evA.id)
