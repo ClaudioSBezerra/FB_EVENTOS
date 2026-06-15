@@ -64,10 +64,12 @@ export async function startWorker(): Promise<Runner> {
     // create lives in graphile-worker's bundled SQL. In production this
     // runs once on first deploy (idempotent on subsequent boots).
     noHandleSignals: false,
-    // Empty crontab in Phase 0 — Phase 2 will add expire-lot-reservations
-    // and other periodic jobs. Empty string is the documented "no cron"
-    // value per graphile-worker docs.
-    crontab: '',
+    // Phase 2 (Plan 02-03): populate crontab with recurring jobs.
+    //   - reservation.expire: every minute (AM-03 — 1 min is graphile-worker minimum).
+    //     Releases lot_reservations rows where expires_at < now() AND released_at IS NULL.
+    //   - outbox.drain: registered in Plan 02-06 (outbox drain handler).
+    // Graphile-worker crontab format: "* * * * * taskIdentifier [options]"
+    crontab: '* * * * * reservation.expire\n',
     taskList,
   })
 
