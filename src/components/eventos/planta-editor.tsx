@@ -56,8 +56,12 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
  *   - 'dashboard' — read-only render with lots colored by status, click opens
  *                   a popover with lot details. No toolbar, no transformer,
  *                   no drag. (Plan 01-07.)
+ *   - 'buyer'     — marketplace view: same color scheme but click only fires
+ *                   onLotClicked for available lots; sold/reserved lots have
+ *                   cursor:not-allowed and block interaction. SSE subscription
+ *                   updates lot colors in real time (Plan 02-03/02-04).
  */
-export type PlantaEditorMode = 'editor' | 'dashboard'
+export type PlantaEditorMode = 'editor' | 'dashboard' | 'buyer'
 
 /**
  * Dashboard-mode lot meta consumed by the popover. The fill/stroke hex
@@ -97,11 +101,16 @@ interface PlantaEditorProps {
   /** Defaults to 'editor'. Set to 'dashboard' for the read-only occupancy view. */
   mode?: PlantaEditorMode
   /**
-   * Required when `mode='dashboard'`. Indexed by lot id; the dashboard render
-   * fills/strokes lots using these colors and the popover reads vendor + price
-   * from this map.
+   * Required when `mode='dashboard'` or `mode='buyer'`. Indexed by lot id; the
+   * dashboard/buyer render fills/strokes lots using these colors and the popover
+   * reads vendor + price from this map.
    */
   dashboardLots?: Record<string, DashboardLotMeta>
+  /**
+   * Buyer-mode callback. Called when a fornecedor clicks an *available* lot.
+   * Not called for sold or reserved lots (cursor:not-allowed intercepts).
+   */
+  onLotClicked?: (lotId: string) => void
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -164,6 +173,23 @@ async function pdfToCanvas(pdfUrl: string): Promise<HTMLCanvasElement> {
 // Editor component
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Buyer-mode lot colors (plan 02-03).
+ * available → green, reserved → grey, sold → red.
+ */
+function getBuyerLotColor(status: string): { fill: string; stroke: string } {
+  switch (status) {
+    case 'available':
+      return { fill: '#10b981', stroke: '#059669' } // emerald
+    case 'reserved':
+      return { fill: '#9ca3af', stroke: '#6b7280' } // grey
+    case 'sold':
+      return { fill: '#ef4444', stroke: '#dc2626' } // red
+    default:
+      return { fill: '#9ca3af', stroke: '#6b7280' }
+  }
+}
+
 export function PlantaEditor({
   eventId,
   plantaUrl,
@@ -172,8 +198,10 @@ export function PlantaEditor({
   categories,
   mode: displayMode = 'editor',
   dashboardLots,
+  onLotClicked,
 }: PlantaEditorProps) {
   const isDashboard = displayMode === 'dashboard'
+  const isBuyer = displayMode === 'buyer'
   const [lots, setLots] = useState<LotState[]>(() => initialLots.map(polygonFromRow))
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mode, setMode] = useState<EditorMode>('select')
@@ -189,6 +217,18 @@ export function PlantaEditor({
     x: number
     y: number
   } | null>(null)
+
+  // Buyer-mode: live lot status overrides from SSE (plan 02-04 wires the handler).
+  // Indexed by lot_id → status string. Starts empty; SSE messages update it.
+  const [buyerLotStatuses, setBuyerLotStatuses] = useState<Record<string, string>>(() => {
+    // Pre-populate from dashboardLots so the initial render shows correct colors
+    if (!dashboardLots) return {}
+    const m: Record<string, string> = {}
+    for (const [id, meta] of Object.entries(dashboardLots)) {
+      m[id] = meta.status
+    }
+    return m
+  })
 
   // Refs the Transformer uses.
   // biome-ignore lint/suspicious/noExplicitAny: Konva node typing is internal
@@ -232,6 +272,31 @@ export function PlantaEditor({
       cancelled = true
     }
   }, [plantaUrl, plantaContentType])
+
+  // ──────────────────────────────────────────────────────────────────────
+  // SSE subscription — buyer mode only (Plan 02-03 producer side)
+  // The SSE Route Handler is implemented in Plan 02-04. This useEffect
+  // only establishes the EventSource connection; the handler validates
+  // the session before opening the stream.
+  // ──────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isBuyer) return
+    const url = `/api/sse/events/${eventId}/lots`
+    const es = new EventSource(url)
+    es.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data) as { lot_id: string; new_status: string }
+        if (data.lot_id && data.new_status) {
+          setBuyerLotStatuses((prev) => ({ ...prev, [data.lot_id]: data.new_status }))
+        }
+      } catch {
+        // Malformed SSE payload — ignore
+      }
+    }
+    return () => {
+      es.close()
+    }
+  }, [eventId, isBuyer])
 
   // ──────────────────────────────────────────────────────────────────────
   // Transformer attach to selected
@@ -462,8 +527,8 @@ export function PlantaEditor({
 
   return (
     <div className="space-y-3" data-testid="planta-editor" data-mode={displayMode}>
-      {/* Toolbar — editor mode only. Dashboard mode renders a small legend. */}
-      {isDashboard ? (
+      {/* Toolbar — editor mode only. Dashboard/buyer mode renders a small legend. */}
+      {isDashboard || isBuyer ? (
         <div
           className="flex flex-wrap items-center gap-3 rounded-md border bg-slate-50 px-3 py-2 text-xs"
           data-testid="planta-legend"
@@ -478,7 +543,11 @@ export function PlantaEditor({
           <span className="flex items-center gap-1">
             <span className="inline-block h-3 w-3 rounded-sm bg-red-500" /> Vendido
           </span>
-          <span className="ml-auto text-slate-500">Clique em um lote para detalhes.</span>
+          <span className="ml-auto text-slate-500">
+            {isBuyer
+              ? 'Clique em um lote disponível para reservar.'
+              : 'Clique em um lote para detalhes.'}
+          </span>
         </div>
       ) : (
         <div
@@ -556,8 +625,8 @@ export function PlantaEditor({
         <Stage
           width={STAGE_WIDTH}
           height={STAGE_HEIGHT}
-          onClick={isDashboard ? undefined : onStageClick}
-          onDblClick={isDashboard ? undefined : onStageDblClick}
+          onClick={isDashboard || isBuyer ? undefined : onStageClick}
+          onDblClick={isDashboard || isBuyer ? undefined : onStageDblClick}
         >
           <Layer>
             {backgroundImage && (
@@ -569,11 +638,20 @@ export function PlantaEditor({
               />
             )}
             {lots.map((lot) => {
-              // Dashboard mode: status colors from dashboardLots map.
+              // Dashboard/buyer mode: status colors from dashboardLots map.
+              // Buyer mode: live overrides from buyerLotStatuses (SSE updates).
               // Editor mode: category color (Plan 01-03 behavior, unchanged).
               let fill: string
               let stroke: string
-              if (isDashboard && dashboardLots?.[lot.id]) {
+
+              if (isBuyer) {
+                // Buyer mode: use live status (SSE override) or dashboardLots fallback
+                const liveStatus =
+                  buyerLotStatuses[lot.id] ?? dashboardLots?.[lot.id]?.status ?? 'available'
+                const colors = getBuyerLotColor(liveStatus)
+                fill = `${colors.fill}66` // 40% opacity
+                stroke = colors.stroke
+              } else if (isDashboard && dashboardLots?.[lot.id]) {
                 const meta = dashboardLots[lot.id]
                 if (meta) {
                   fill = `${meta.colorFill}40`
@@ -587,6 +665,13 @@ export function PlantaEditor({
                 fill = `${cat?.color ?? lot.geometry.fill ?? DEFAULT_FILL}40`
                 stroke = lot.geometry.stroke ?? DEFAULT_STROKE
               }
+
+              // Buyer mode: determine if the lot is clickable
+              const liveStatus = isBuyer
+                ? (buyerLotStatuses[lot.id] ?? dashboardLots?.[lot.id]?.status ?? 'available')
+                : null
+              const buyerClickable = isBuyer && liveStatus === 'available'
+
               return (
                 <Line
                   key={lot.id}
@@ -598,8 +683,15 @@ export function PlantaEditor({
                   stroke={stroke}
                   strokeWidth={lot.geometry.stroke_width ?? 2}
                   closed
-                  draggable={!isDashboard && mode === 'select'}
+                  // Buyer mode: non-available lots block interaction (listening=false)
+                  listening={isBuyer ? buyerClickable : true}
+                  draggable={!isDashboard && !isBuyer && mode === 'select'}
                   onClick={(e: KonvaEventObject<MouseEvent>) => {
+                    if (isBuyer) {
+                      // Only available lots reach here (listening=false for others)
+                      onLotClicked?.(lot.id)
+                      return
+                    }
                     if (isDashboard) {
                       // Open the dashboard popover near the click point.
                       // biome-ignore lint/suspicious/noExplicitAny: Konva stage typing
@@ -625,7 +717,7 @@ export function PlantaEditor({
               )
             })}
             {/* In-progress polygon while in draw mode (editor only) */}
-            {!isDashboard && mode === 'draw' && drawPoints.length > 0 && (
+            {!isDashboard && !isBuyer && mode === 'draw' && drawPoints.length > 0 && (
               <Line
                 points={flattenPoints(drawPoints)}
                 stroke={DEFAULT_STROKE}
@@ -635,7 +727,7 @@ export function PlantaEditor({
                 listening={false}
               />
             )}
-            {!isDashboard && mode === 'select' && (
+            {!isDashboard && !isBuyer && mode === 'select' && (
               <Transformer
                 ref={transformerRef}
                 rotateEnabled={false}
@@ -651,24 +743,25 @@ export function PlantaEditor({
         </Stage>
 
         {/* Dashboard popover (absolute over the canvas). Click outside to close. */}
-        {isDashboard && popover && dashboardLots?.[popover.lotId] && (
+        {isDashboard && !isBuyer && popover && dashboardLots?.[popover.lotId] ? (
           <DashboardLotPopover
             anchorX={popover.x}
             anchorY={popover.y}
             lotCode={lots.find((l) => l.id === popover.lotId)?.code ?? '—'}
+            // biome-ignore lint/style/noNonNullAssertion: guarded by the outer ternary condition
             meta={dashboardLots[popover.lotId]!}
             onClose={() => setPopover(null)}
           />
-        )}
+        ) : null}
       </div>
 
       {/* Selected lot meta (editor mode only) */}
-      {!isDashboard && selectedId && (
+      {!isDashboard && !isBuyer && selectedId && (
         <p className="text-xs text-slate-600" data-testid="planta-selected-meta">
           Selecionado: <strong>{lots.find((l) => l.id === selectedId)?.code ?? '—'}</strong>
         </p>
       )}
-      {!isDashboard && mode === 'draw' && (
+      {!isDashboard && !isBuyer && mode === 'draw' && (
         <p className="text-xs text-slate-600">
           Clique para adicionar vértices ({drawPoints.length} ponto
           {drawPoints.length === 1 ? '' : 's'}); duplo-clique fecha o polígono (mínimo 3).
