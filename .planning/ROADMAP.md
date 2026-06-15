@@ -76,7 +76,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 8 plans
 
 **Wave 1**
-- [ ] 02-01-PLAN.md — Wave 0 test infra + 8 new Drizzle schemas + Migrations 0017-0020 [BLOCKING db:generate + db:migrate]
+- [x] 02-01-PLAN.md — Wave 0 test infra + 8 new Drizzle schemas + Migrations 0017-0020 [BLOCKING db:generate + db:migrate]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 02-02-PLAN.md — Fornecedor signup-by-slug + marketplace event discovery (FORN-01, FORN-02)
@@ -146,7 +146,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 7/7 | Complete   | 2026-06-12 |
 | 1. Organizadora End-to-End (Piloto Festa de Trindade) | 8/8 | Complete   | 2026-06-14 |
-| 2. Fornecedor Self-Service + Checkout PIX/Cartão | 0/8 | Planned (ready to execute) | - |
+| 2. Fornecedor Self-Service + Checkout PIX/Cartão | 1/8 | In Progress|  |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
 | 4. Público — Ticketing, F&B, Marketplace, Integrações | 0/TBD | Not started | - |
 

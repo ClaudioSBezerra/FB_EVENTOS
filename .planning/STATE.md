@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 02 planned (8 plans, FORN-01..FORN-18 covered); ready to execute
-last_updated: "2026-06-14T23:21:22.119Z"
-last_activity: 2026-06-14 -- Phase 02 planning complete
+stopped_at: Phase 02 plan 01 (Wave 0 scaffold) complete; PAUSED at monthly cap before plan 02-02
+last_updated: "2026-06-14T23:58:00.000Z"
+last_activity: 2026-06-14 -- Plan 02-01 complete (schemas + migrations + 18 test scaffolds); paused on cap
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 23
-  completed_plans: 15
-  percent: 40
+  completed_plans: 16
+  percent: 42
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-11)
 
 **Core value:** Habilitar a organizadora a vender espaços de eventos a fornecedores de forma self-service, com planta visual e pagamento integrado — sem precisar de WhatsApp/Excel/contratos em papel.
-**Current focus:** Phase 02 — Fornecedor Self-Service + Checkout PIX/Cartão (planned, ready to execute — 8/8 plans)
+**Current focus:** Phase 02 — fornecedor-self-service-checkout-pix-cartao
 
 ## Current Position
 
-Phase: 02 (Fornecedor Self-Service + Checkout PIX/Cartão) — planned, ready to execute
-Plan: 0 of 8 (run /gsd-execute-phase 2 to start Wave 1)
-Status: Ready to execute — 02-01..02-08 verified iter 2 PASSED; 6 amendments AM-01..AM-06 thread through plans; 3 CHECKPOINTs gate execution (02-05 HMAC+installments probe; 02-07 jose pinned install; 02-08 production webhook flip)
-Last activity: 2026-06-14 -- Phase 02 planning complete (FORN-01..FORN-18 covered)
+Phase: 02 (fornecedor-self-service-checkout-pix-cartao) — PAUSED (cap)
+Plan: 1 of 8 complete (02-01 Wave 0 scaffold landed; 02-02..02-08 pending)
+Status: Paused on monthly spend cap; resume after quota reset with `/gsd-execute-phase 2`
+Last activity: 2026-06-14 -- Plan 02-01 complete (4 commits on main); paused before 02-02 dispatch
 
 Progress: [██████████] 100% (structural)
 
