@@ -59,7 +59,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & push web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
@@ -79,7 +79,7 @@ jobs:
         # Plan 07: worker runs as a SEPARATE Coolify service from the web
         # process. Same semver — they ship together — different image tag
         # so Coolify's service config can pin them independently.
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
