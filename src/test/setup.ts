@@ -48,6 +48,14 @@ beforeAll(async () => {
   migratorPool = mod.migratorPool
   // Sanity: confirm we can talk to Postgres before any test runs.
   await migratorPool`SELECT 1`
+  // Ensure graphile_worker RLS policies are applied. Migration 0009 calls
+  // fb_install_graphile_worker_policies() once at migration time, but graphile-
+  // worker may install new tables after migrations run (e.g., on first worker
+  // boot in CI). Re-running the function is idempotent (IF NOT EXISTS guard)
+  // and ensures the fb_eventos_app role can call add_job() in tests.
+  // Omitting this causes "new row violates row-level security policy for table
+  // _private_tasks" in any test that calls enqueueJob (approval, signup, etc).
+  await migratorPool`SELECT fb_install_graphile_worker_policies()`
 })
 
 afterEach(async () => {
