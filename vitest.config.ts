@@ -27,6 +27,10 @@ export default defineConfig({
       // load-bearing for src/lib/email.ts which checks env.NODE_ENV at
       // parse time to choose the in-memory capture transport.
       NODE_ENV: 'test',
+      // Pagar.me test credentials (dummy values — MSW intercepts real HTTP calls).
+      // Overrides: individual tests that need a specific key can do process.env.X = Y.
+      PAGARME_SECRET_KEY: 'sk_test_dummy',
+      PAGARME_ENV: 'sandbox',
     },
     testTimeout: 30000,
     // Serialize DB tests on a single worker. Different test files run

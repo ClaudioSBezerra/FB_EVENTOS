@@ -22,6 +22,7 @@ import type { TaskList } from 'graphile-worker'
 import { echo } from './echo'
 import { EMAIL_SEND_STATUS_UPDATE_TASK, emailSendStatusUpdate } from './email-send-status-update'
 import { LOT_NOTIFY_CHANNEL_TASK, lotNotifyChannel } from './lot-notify-channel'
+import { PAYMENT_PROCESS_WEBHOOK_TASK, paymentProcessWebhook } from './payment-process-webhook'
 import { PDF_GENERATE_CONTRACT_TASK, pdfGenerateContract } from './pdf-generate-contract'
 import { RESERVATION_EXPIRE_TASK, reservationExpire } from './reservation-expire'
 import { ZAPSIGN_SEND_CONTRACT_TASK, zapsignSendContract } from './zapsign-send-contract'
@@ -33,4 +34,5 @@ export const taskList: TaskList = {
   [EMAIL_SEND_STATUS_UPDATE_TASK]: emailSendStatusUpdate,
   [RESERVATION_EXPIRE_TASK]: reservationExpire,
   [LOT_NOTIFY_CHANNEL_TASK]: lotNotifyChannel,
+  [PAYMENT_PROCESS_WEBHOOK_TASK]: paymentProcessWebhook,
 }

@@ -1,75 +1,54 @@
-// FB_EVENTOS — Pagar.me webhook handler (Phase 1, Plan 01-06 Task 2).
+// FB_EVENTOS — Pagar.me webhook handler (Phase 2, Plan 02-05 refactor).
 //
-// Receives POST callbacks from Pagar.me v5 and transitions the payments
-// FSM through:
+// Phase 1 used Basic Auth + synchronous belt-and-suspenders re-fetch.
+// Phase 2 replaces both with:
 //
-//   pending → paid     (order.paid OR charge.paid — re-fetch confirms)
-//           → failed   (order.payment_failed OR charge.payment_failed)
-//           → canceled (order.canceled)
-//           → refunded (charge.refunded)
+//   1. HMAC-SHA256 verification (FORN-11, T-02-05-01).
+//      - Read body as raw bytes BEFORE json() — prevents any body
+//        normalization that would break HMAC (Pitfall 1: "raw body first").
+//      - Header: X-Hub-Signature (PAGARME_HMAC_HEADER_NAME — AM-02 default;
+//        probe pending at tests/probes/pagarme-hmac-header-probe.test.ts).
+//      - Signature is base64(HMAC-SHA256(secret, rawBody)).
+//      - Wrong/missing HMAC → 401.
 //
-// SECURITY MODEL (mirrors src/app/api/webhooks/zapsign/route.ts):
-//   1. HTTP Basic Auth header verified against PAGARME_WEBHOOK_USER +
-//      PAGARME_WEBHOOK_PASS env (configured in Pagar.me dashboard).
-//      Missing/wrong auth → 401.
-//   2. **Belt-and-suspenders re-fetch**: after Basic Auth passes, the
-//      handler GETs the order from Pagar.me API via getOrder(orderId)
-//      and trusts the API status over the webhook payload. Webhook is a
-//      notification; API is the source of truth (defends against spoofing —
-//      RESEARCH §A8 Pitfall).
-//   3. Always returns 200 to Pagar.me on processable events. Returns 400
-//      ONLY when the re-fetch fails (so Pagar.me retries with backoff).
-//   4. Idempotent terminal-state guard: once payments.status is in
-//      {paid, failed, canceled, refunded}, every subsequent webhook
-//      delivery is a no-op (no double audit, no double email enqueue) —
-//      the FSM itself is the dedup key.
+//   2. Inbox idempotency (FORN-10, T-02-05-02..03):
+//      - INSERT INTO payment_webhooks_inbox ... ON CONFLICT DO NOTHING.
+//      - Duplicate delivery → 200 with { ok: true, duplicate: true }.
+//
+//   3. Enqueue background job (payment FSM via graphile-worker).
+//      - The handler does NOT call Pagar.me API — the worker does (FORN-12).
+//      - Belt-and-suspenders re-fetch moved to the worker (D-13).
+//
+// PERFORMANCE TARGET (FORN-12): handler MUST complete in <100ms p95.
+//   Achieved by: raw body read → HMAC verify → cross-tenant lookup →
+//   inbox INSERT → enqueue → return 200. No external HTTP calls.
 //
 // TENANT RESOLUTION:
-//   No session yet; we resolve tenant_id from payments.gateway_order_id
-//   via the migrator pool (Migration 0015 grants SELECT-only on payments
-//   to fb_eventos_migrator) BEFORE entering withTenant() to apply the
-//   FSM transition.
+//   Resolve tenant_id from payments.gateway_order_id via migratorPool
+//   (BYPASSRLS) BEFORE entering any tenant-scoped transaction.
+//
+// SECURITY (ADR-0005):
+//   HMAC is belt-and-suspenders over the webhook channel. The worker
+//   additionally re-fetches the order from Pagar.me before applying
+//   any FSM transition (D-13).
+//
+// REFERENCES:
+//   - 02-CONTEXT.md D-14 (inbox idempotency), D-13 (re-fetch in worker)
+//   - docs/adr/0005-webhook-hmac-strategy.md
+//   - src/lib/pagarme/hmac.ts (verifyWebhookSignature)
+//   - src/db/schema/payment_webhooks_inbox.ts
 
-import { eq } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
+
+import { pool } from '@/db'
 import { migratorPool } from '@/db/migrator-pool'
-import { payments } from '@/db/schema/payments'
-import { withTenant } from '@/db/with-tenant'
 import { enqueueJob } from '@/jobs/enqueue'
-import { rawSqlFromTenantDb } from '@/jobs/raw-sql-from-tenant-db'
-import { EMAIL_STATUS_UPDATE_TASK } from '@/jobs/tasks/zapsign-send-contract'
-import { recordAudit } from '@/lib/audit'
+import { PAYMENT_PROCESS_WEBHOOK_TASK } from '@/jobs/tasks/payment-process-webhook'
 import { logger } from '@/lib/logger'
-import { getOrder } from '@/lib/pagarme/client'
-import { type PagarmeWebhookEvent, pagarmeWebhookEventSchema } from '@/lib/pagarme/types'
+import { PAGARME_HMAC_HEADER_NAME, verifyWebhookSignature } from '@/lib/pagarme/hmac'
+import { pagarmeWebhookEventSchema } from '@/lib/pagarme/types'
 
 const log = logger.child({ component: 'webhook.pagarme' })
-
-// ────────────────────────────────────────────────────────────────────────────
-// Basic Auth check (Pagar.me v5 dashboard configures user:pass)
-// ────────────────────────────────────────────────────────────────────────────
-
-function verifyBasicAuth(req: NextRequest): boolean {
-  const expectedUser = process.env.PAGARME_WEBHOOK_USER
-  const expectedPass = process.env.PAGARME_WEBHOOK_PASS
-  if (!expectedUser || !expectedPass) {
-    // Fail closed when Basic Auth env is unconfigured — never accept a
-    // webhook that we cannot verify.
-    return false
-  }
-  const header = req.headers.get('authorization')
-  if (!header?.startsWith('Basic ')) return false
-  try {
-    const decoded = Buffer.from(header.slice('Basic '.length), 'base64').toString('utf8')
-    const idx = decoded.indexOf(':')
-    if (idx < 0) return false
-    const user = decoded.slice(0, idx)
-    const pass = decoded.slice(idx + 1)
-    return user === expectedUser && pass === expectedPass
-  } catch {
-    return false
-  }
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Tenant resolution by gateway_order_id (BYPASSRLS lookup via migratorPool)
@@ -90,49 +69,69 @@ async function resolveTenantForOrderId(orderId: string): Promise<{
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// FSM transition decision — map Pagar.me API status to our payments status
-// ────────────────────────────────────────────────────────────────────────────
-
-function decideNewStatus(apiStatus: string, apiChargeStatus?: string): string | null {
-  // Order-level statuses (Pagar.me docs):
-  //   pending | paid | canceled | failed
-  const s = apiStatus.toLowerCase()
-  const cs = (apiChargeStatus ?? '').toLowerCase()
-  if (s === 'paid' || cs === 'paid') return 'paid'
-  if (s === 'failed' || cs === 'failed') return 'failed'
-  if (s === 'canceled' || cs === 'canceled') return 'canceled'
-  if (cs === 'refunded') return 'refunded'
-  return null
-}
-
-const TERMINAL_PAYMENT_STATUSES = new Set(['paid', 'failed', 'canceled', 'refunded'])
-
-// ────────────────────────────────────────────────────────────────────────────
 // POST handler
 // ────────────────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // 1. Basic Auth.
-  if (!verifyBasicAuth(req)) {
-    log.warn('unauthorized webhook delivery (Basic Auth failed)')
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  // ── Step 1: Read raw body bytes BEFORE json() ───────────────────────────
+  // PITFALL 1 (load-bearing): body must be consumed as raw bytes for HMAC
+  // verification. Calling req.json() first causes Node to normalize the body
+  // (re-serialize, compact whitespace) which changes the byte sequence and
+  // breaks the HMAC. We read the ArrayBuffer first, then decode to string.
+  const rawBuffer = await req.arrayBuffer()
+  const rawBody = Buffer.from(rawBuffer)
+
+  // ── Step 2: HMAC-SHA256 verification (FORN-11) ──────────────────────────
+  const sigHeader = req.headers.get(PAGARME_HMAC_HEADER_NAME)
+  const hmacSecret = process.env.PAGARME_WEBHOOK_SIGNING_SECRET
+
+  if (hmacSecret) {
+    if (!verifyWebhookSignature(rawBody, sigHeader, hmacSecret)) {
+      log.warn(
+        { header: PAGARME_HMAC_HEADER_NAME, hasHeader: !!sigHeader },
+        'HMAC signature verification failed',
+      )
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    }
+  } else {
+    // Fallback: Basic Auth compat (Phase 1 — only when HMAC secret not set).
+    // In production, PAGARME_WEBHOOK_SIGNING_SECRET MUST be configured.
+    const expectedUser = process.env.PAGARME_WEBHOOK_USER
+    const expectedPass = process.env.PAGARME_WEBHOOK_PASS
+    if (expectedUser && expectedPass) {
+      const authHeader = req.headers.get('authorization')
+      if (!authHeader?.startsWith('Basic ')) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+      }
+      try {
+        const decoded = Buffer.from(authHeader.slice('Basic '.length), 'base64').toString('utf8')
+        const idx = decoded.indexOf(':')
+        const user = idx >= 0 ? decoded.slice(0, idx) : ''
+        const pass = idx >= 0 ? decoded.slice(idx + 1) : ''
+        if (user !== expectedUser || pass !== expectedPass) {
+          return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+      }
+    } else {
+      // Neither secret configured — allow in dev with a warning.
+      log.warn('PAGARME_WEBHOOK_SIGNING_SECRET not set — auth skipped (dev only)')
+    }
   }
 
-  // 2. Parse + validate payload.
-  let parsed: PagarmeWebhookEvent
+  // ── Step 3: Parse + validate payload ────────────────────────────────────
+  let parsed: ReturnType<typeof pagarmeWebhookEventSchema.parse>
   try {
-    const raw = (await req.json()) as unknown
-    parsed = pagarmeWebhookEventSchema.parse(raw)
+    const bodyText = rawBody.toString('utf8')
+    const rawJson = JSON.parse(bodyText) as unknown
+    parsed = pagarmeWebhookEventSchema.parse(rawJson)
   } catch (err) {
     log.warn({ err: err instanceof Error ? err.message : String(err) }, 'invalid webhook payload')
-    // Return 200 so Pagar.me doesn't retry forever on a malformed payload.
     return NextResponse.json({ ok: true, ignored: 'invalid_payload' }, { status: 200 })
   }
 
-  // 3. Extract the order id from the event data. Pagar.me v5 sends:
-  //    - order.* events: data.id starts with "or_"
-  //    - charge.* events: data.id starts with "ch_" (and data.order may
-  //      carry the order_id; failing that we cannot route the event)
+  // ── Step 4: Extract order id ─────────────────────────────────────────────
   // biome-ignore lint/suspicious/noExplicitAny: passthrough payload at this layer
   const data = parsed.data as any
   let orderId: string | undefined
@@ -149,145 +148,76 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true, ignored: 'no_order_id' }, { status: 200 })
   }
 
-  // 4. Resolve tenant via payments lookup.
+  // ── Step 5: Resolve tenant ───────────────────────────────────────────────
   const resolved = await resolveTenantForOrderId(orderId)
   if (!resolved) {
     log.warn({ orderId }, 'no payments row for order_id — ignoring')
-    // 200 so Pagar.me does not retry — the payment may belong to a
-    // different account or our DB has not yet caught up.
     return NextResponse.json({ ok: true, ignored: 'unknown_order' }, { status: 200 })
   }
 
-  // 5. Belt-and-suspenders RE-FETCH from Pagar.me API. If this fails,
-  //    return 400 so Pagar.me retries the webhook.
-  let apiOrder: Awaited<ReturnType<typeof getOrder>>
+  // ── Step 6: Inbox INSERT + enqueue (single appPool transaction) ──────────
+  // INSERT INTO payment_webhooks_inbox ... ON CONFLICT DO NOTHING.
+  // gateway_event_id is the TEXT PRIMARY KEY — duplicate events hit the
+  // CONFLICT clause and return 0 rows (duplicate detected).
+  //
+  // payment_webhooks_inbox has FORCE RLS with tenant_isolation policy (TO
+  // fb_eventos_app). The main `pool` uses the fb_eventos_app role — we must
+  // SET LOCAL app.current_tenant_id so the RLS CHECK constraint passes.
+  // graphile_worker.add_job is GRANTed EXECUTE to fb_eventos_app (verified
+  // in Plan 06 probe), so the enqueue happens in the same transaction.
   try {
-    apiOrder = await getOrder(orderId)
-  } catch (err) {
-    log.error(
-      { err: err instanceof Error ? err.message : String(err), orderId },
-      'Pagar.me API re-fetch failed — returning 400 so Pagar.me retries',
-    )
-    return NextResponse.json({ error: 'refetch_failed' }, { status: 400 })
-  }
+    const result = await pool.begin(async (tx) => {
+      // Set the tenant context for FORCE RLS on payment_webhooks_inbox.
+      await tx`SELECT set_config('app.current_tenant_id', ${resolved.tenantId}, true)`
 
-  // 6. Decide the FSM transition based on API status (NOT webhook payload).
-  const apiCharge = apiOrder.charges[0]
-  const newStatus = decideNewStatus(apiOrder.status, apiCharge?.status)
-
-  // 7. Apply transition inside withTenant.
-  try {
-    await withTenant(resolved.tenantId, async (db) => {
-      // Append the webhook event to pagarme_orders.response_payload?
-      // We instead append to a `last_webhook_event` jsonb merge — but our
-      // schema only has `response_payload`. For Phase 1 we DO NOT mutate
-      // response_payload (created by createCharge); the audit_log row is
-      // the durable webhook trail.
-
-      // Idempotency: if the payment is already in a terminal state, skip
-      // the FSM update, audit, and side-effects. Mirrors Plan 01-05 ZapSign
-      // webhook idempotency-at-FSM-boundary pattern.
-      const currentRows = await db
-        .select({ status: payments.status, id: payments.id })
-        .from(payments)
-        .where(eq(payments.id, resolved.paymentId))
-        .limit(1)
-      const current = currentRows[0]
-      if (!current) {
-        log.warn(
-          { paymentId: resolved.paymentId },
-          'payment row vanished between resolveTenant and withTenant — ignoring',
+      // a. INSERT into inbox with ON CONFLICT DO NOTHING.
+      const inboxRows = await tx<Array<{ gateway_event_id: string }>>`
+        INSERT INTO payment_webhooks_inbox
+          (gateway_event_id, tenant_id, event_type, payload)
+        VALUES (
+          ${parsed.id},
+          ${resolved.tenantId}::uuid,
+          ${parsed.type},
+          ${JSON.stringify(parsed)}::jsonb
         )
-        return
+        ON CONFLICT (gateway_event_id) DO NOTHING
+        RETURNING gateway_event_id
+      `
+
+      if (inboxRows.length === 0) {
+        // Duplicate delivery — return null signal.
+        return null
       }
 
-      if (newStatus === null) {
-        // No transition triggered (e.g. an order.viewed-like event). Audit
-        // only — keep the trail of what arrived.
-        await recordAudit(db, {
-          action: 'payment.webhook',
-          entity: 'payment',
-          entityId: resolved.paymentId,
-          userId: '00000000-0000-0000-0000-000000000000',
-          payload: {
-            event_id: parsed.id,
-            event_type: parsed.type,
-            order_id: orderId,
-            api_status: apiOrder.status,
-            api_charge_status: apiCharge?.status ?? null,
-            no_transition: true,
-          },
-        })
-        return
-      }
-
-      if (TERMINAL_PAYMENT_STATUSES.has(current.status)) {
-        // Already terminal — duplicate webhook delivery. No-op. We drop
-        // ALL transitions into terminal states (mirrors Plan 01-05 Rule 1
-        // idempotency fix) so the side-effects only fire on the FIRST
-        // arrival, regardless of what newStatus is.
-        return
-      }
-
-      // Update payments FSM.
-      const updates: Partial<typeof payments.$inferInsert> = {
-        status: newStatus,
-        updatedAt: new Date(),
-      }
-      if (newStatus === 'paid') {
-        updates.paidAt = new Date()
-      }
-      await db.update(payments).set(updates).where(eq(payments.id, resolved.paymentId))
-
-      // Append the webhook event into pagarme_orders.response_payload?
-      // Phase 1 keeps response_payload immutable (from createCharge) and
-      // stores the webhook callback in audit_log only. Phase 2 outbox will
-      // introduce a pagarme_inbox table with append-only event history.
-
-      // Audit the transition.
-      await recordAudit(db, {
-        action: 'payment.webhook',
-        entity: 'payment',
-        entityId: resolved.paymentId,
-        userId: '00000000-0000-0000-0000-000000000000',
-        payload: {
-          event_id: parsed.id,
-          event_type: parsed.type,
-          order_id: orderId,
-          api_status: apiOrder.status,
-          api_charge_status: apiCharge?.status ?? null,
-          status_new: newStatus,
-        },
+      // b. Enqueue the background worker inside the SAME transaction.
+      //    Atomic: if either fails, both roll back.
+      await enqueueJob(tx, PAYMENT_PROCESS_WEBHOOK_TASK, {
+        tenant_id: resolved.tenantId,
+        payment_id: resolved.paymentId,
+        gateway_event_id: parsed.id,
+        order_id: orderId,
+        event_type: parsed.type,
       })
 
-      // Side-effect: on the 'paid' transition, enqueue the email job
-      // (Plan 01-08 will register the email task handler). Payload shape
-      // pinned by tests/lgpd/notifications.test.ts.
-      if (newStatus === 'paid') {
-        await enqueueJob(rawSqlFromTenantDb(db), EMAIL_STATUS_UPDATE_TASK, {
-          tenant_id: resolved.tenantId,
-          payment_id: resolved.paymentId,
-          event: 'pagamento_recebido',
-        })
-      }
+      return inboxRows[0]?.gateway_event_id ?? null
     })
+
+    if (result === null) {
+      // Duplicate delivery — idempotency handled.
+      log.info({ eventId: parsed.id, orderId }, 'duplicate webhook delivery — skipping')
+      return NextResponse.json({ ok: true, duplicate: true }, { status: 200 })
+    }
   } catch (err) {
     log.error(
-      { err: err instanceof Error ? err.message : String(err) },
-      'withTenant block failed — returning 400 so Pagar.me retries',
+      { err: err instanceof Error ? err.message : String(err), eventId: parsed.id },
+      'inbox INSERT or enqueue failed — returning 400 for Pagar.me retry',
     )
-    return NextResponse.json({ error: 'transition_failed' }, { status: 400 })
+    return NextResponse.json({ error: 'inbox_or_enqueue_failed' }, { status: 400 })
   }
 
   log.info(
-    {
-      orderId,
-      paymentId: resolved.paymentId,
-      eventType: parsed.type,
-      apiStatus: apiOrder.status,
-      newStatus,
-    },
-    'webhook processed',
+    { orderId, eventId: parsed.id, type: parsed.type, tenantId: resolved.tenantId },
+    'webhook accepted — worker enqueued',
   )
 
   return NextResponse.json({ ok: true }, { status: 200 })

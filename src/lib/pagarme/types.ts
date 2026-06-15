@@ -1,9 +1,18 @@
 // FB_EVENTOS — Pagar.me v5 API types + Zod schemas (Phase 1, Plan 01-06 Task 1).
 //
+// Phase 2 additions (Plan 02-05):
+//   - installments (1..12) in pagarmeCardPaymentSchema.credit_card
+//   - statement_descriptor optional in credit_card
+//   - pagarmeRefundResponseSchema (DELETE /charges/:id)
+//   - REMOVED boleto schema (AM-01 — boleto deferred to Phase 3+)
+//   - Extended webhook event types: charge.partial_canceled, order.payment_failed
+//
 // REFERENCES:
 //   - 01-RESEARCH.md §A8 (Pagar.me v5 Simple Charge — Orders/Charges shape +
 //     Basic Auth + Webhook event types)
 //   - docs.pagar.me/reference (Orders, Charges, eventos-de-webhook-1)
+//   - 02-CONTEXT.md AM-01 (boleto deferred), AM-04 (cancelCharge)
+//   - 02-PATTERNS.md lines 108-161 (client extensions)
 //
 // Phase 1 deliberately models the SIMPLE shape:
 //   - PIX (with expires_in seconds) — primary path
@@ -11,15 +20,17 @@
 //     in our UI, the form posts to Pagar.me to tokenize, browser receives
 //     card_token, then Server Action passes it through)
 //   - NO split, NO subscriptions, NO recipients — those land in Phase 2/3
+//   - NO boleto — deferred per AM-01
 //
 // CHARGE STATUS ENUM (per docs.pagar.me):
 //   pending → paid | failed | canceled | chargedback | refunded
 //
-// WEBHOOK EVENT TYPES we care about in Phase 1:
+// WEBHOOK EVENT TYPES we care about:
 //   order.paid          — order fully paid (every charge paid)
 //   charge.paid         — individual charge paid (we have 1 charge/order)
 //   charge.payment_failed
 //   order.canceled / charge.refunded — terminal failure / refund
+//   charge.partial_canceled — partial refund (AM-04)
 
 import { z } from 'zod'
 
@@ -61,7 +72,16 @@ export const pagarmeCardPaymentSchema = z.object({
      * Phase 1 simple path: trust the token + pass through.
      */
     card_token: z.string().min(1),
-    installments: z.number().int().positive().default(1),
+    /**
+     * Number of installments (1..12). Phase 2 support (FORN-09).
+     * Default 1 (single charge) when omitted.
+     */
+    installments: z.number().int().min(1).max(12).optional(),
+    /**
+     * Statement descriptor shown on the cardholder's bill. Optional — if
+     * omitted, Pagar.me uses the merchant account name. Max 22 chars.
+     */
+    statement_descriptor: z.string().max(22).optional(),
   }),
 })
 
@@ -147,6 +167,28 @@ export type PagarmeOrderResponse = z.infer<typeof pagarmeOrderResponseSchema>
 // Webhook — POST /api/webhooks/pagarme
 // ────────────────────────────────────────────────────────────────────────────
 
+// ────────────────────────────────────────────────────────────────────────────
+// Refund / Cancel — DELETE /core/v5/charges/:id (AM-04)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Response shape for DELETE /core/v5/charges/:id (cancel or partial refund).
+ * Pagar.me v5 returns the charge with updated status.
+ *
+ * For full cancellations: status → 'canceled'
+ * For partial refunds: status → 'partial_canceled' or 'refunded'
+ */
+export const pagarmeRefundResponseSchema = z
+  .object({
+    id: z.string(),
+    status: z.string(),
+    amount: z.number().int().optional(),
+    /** Amount that was actually refunded, in centavos. */
+    amount_refunded: z.number().int().optional(),
+  })
+  .passthrough()
+export type PagarmeRefundResponse = z.infer<typeof pagarmeRefundResponseSchema>
+
 export const PAGARME_WEBHOOK_EVENT_TYPES = [
   'order.paid',
   'order.payment_failed',
@@ -154,6 +196,7 @@ export const PAGARME_WEBHOOK_EVENT_TYPES = [
   'charge.paid',
   'charge.payment_failed',
   'charge.refunded',
+  'charge.partial_canceled',
 ] as const
 export type PagarmeWebhookEventType = (typeof PAGARME_WEBHOOK_EVENT_TYPES)[number]
 
