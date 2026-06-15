@@ -8,14 +8,20 @@
 // Phase 2 additions (Plan 02-03):
 //   - reservation.expire — scheduled every minute via crontab in runner.ts.
 //
-// Phase 2 stubs (Plans 02-04, 02-06, 02-07 register these):
+// Phase 2 additions (Plan 02-04):
+//   - lot.notify-channel — outbox-drain handler that pg_notifys the SSE
+//     channel for lot status changes that happened outside the originating
+//     transaction (e.g. payment.paid → lot.sold cascade via outbox.drain).
+//
+// Phase 2 stubs (Plans 02-06, 02-07 register these):
 //   - outbox.drain, payment.process-webhook, waitlist.notify-next,
-//     refund.process, lot.notify-channel
+//     refund.process
 
 import type { TaskList } from 'graphile-worker'
 
 import { echo } from './echo'
 import { EMAIL_SEND_STATUS_UPDATE_TASK, emailSendStatusUpdate } from './email-send-status-update'
+import { LOT_NOTIFY_CHANNEL_TASK, lotNotifyChannel } from './lot-notify-channel'
 import { PDF_GENERATE_CONTRACT_TASK, pdfGenerateContract } from './pdf-generate-contract'
 import { RESERVATION_EXPIRE_TASK, reservationExpire } from './reservation-expire'
 import { ZAPSIGN_SEND_CONTRACT_TASK, zapsignSendContract } from './zapsign-send-contract'
@@ -26,4 +32,5 @@ export const taskList: TaskList = {
   [ZAPSIGN_SEND_CONTRACT_TASK]: zapsignSendContract,
   [EMAIL_SEND_STATUS_UPDATE_TASK]: emailSendStatusUpdate,
   [RESERVATION_EXPIRE_TASK]: reservationExpire,
+  [LOT_NOTIFY_CHANNEL_TASK]: lotNotifyChannel,
 }
