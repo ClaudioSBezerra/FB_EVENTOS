@@ -82,6 +82,13 @@ GRANT ALL ON DATABASE fb_eventos_dev TO fb_migrator;
 -- explicit USAGE+CREATE on public schema for non-owner roles).
 GRANT USAGE, CREATE ON SCHEMA public TO fb_eventos_migrator;
 
+-- Same for sysreader. Migration 0011 issues `ALTER FUNCTION ... OWNER TO
+-- fb_eventos_sysreader`, and PostgreSQL 15+ requires the new owner role
+-- to hold CREATE on the schema the object lives in. Without this grant
+-- migration 0011 fails with `permission denied for schema public` on
+-- fresh databases.
+GRANT USAGE, CREATE ON SCHEMA public TO fb_eventos_sysreader;
+
 -- Make fb_eventos_migrator a member of fb_eventos_sysreader so it can
 -- ALTER FUNCTION ... OWNER TO fb_eventos_sysreader in migration 0011
 -- (PostgreSQL requires the role doing the ALTER to be a member of the
