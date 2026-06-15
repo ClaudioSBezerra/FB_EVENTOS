@@ -120,6 +120,34 @@
       "when": 1781383161119,
       "tag": "0016_tenant_platform_commission",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1781480257970,
+      "tag": "0017_phase2_domain_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781480258070,
+      "tag": "0018_phase2_force_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1781480258170,
+      "tag": "0019_phase2_migrator_select_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1781480258270,
+      "tag": "0020_tenants_phase2_columns",
+      "breakpoints": true
     }
   ]
 }
