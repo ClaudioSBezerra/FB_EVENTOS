@@ -82,13 +82,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 02-02-PLAN.md — Fornecedor signup-by-slug + marketplace event discovery (FORN-01, FORN-02)
 
 **Wave 3** *(blocked on Wave 2)*
-- [ ] 02-03-PLAN.md — Lot reservation + Konva mode='buyer' + advisory lock + reservation.expire @1min (FORN-03..06, 13)
+- [x] 02-03-PLAN.md — Lot reservation + Konva mode='buyer' + advisory lock + reservation.expire @1min (FORN-03..06, 13)
 
 **Wave 4** *(blocked on Wave 3)*
-- [ ] 02-04-PLAN.md — SSE Route Handler + lot.notify-channel via LISTEN/NOTIFY (FORN-07)
+- [x] 02-04-PLAN.md — SSE Route Handler + lot.notify-channel via LISTEN/NOTIFY (FORN-07)
 
 **Wave 5** *(blocked on Wave 3)*
-- [ ] 02-05-PLAN.md — Cart + add-ons + Pagar.me PIX/cartão checkout + HMAC + installments-shape probe + inbox handler (FORN-08..12) [CHECKPOINT: AM-02 + AM-06 probes]
+- [x] 02-05-PLAN.md — Cart + add-ons + Pagar.me PIX/cartão checkout + HMAC + installments-shape probe + inbox handler (FORN-08..12) [CHECKPOINT: AM-02 + AM-06 probes]
 
 **Wave 6** *(blocked on Waves 3 + 4 + 5)*
 - [ ] 02-06-PLAN.md — outbox.drain @1min + 4 handlers + SAGA cancel + ADR-0006 (FORN-14)
@@ -146,7 +146,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation, Stack Lock & Anti-Pitfall Hardening | 7/7 | Complete   | 2026-06-12 |
 | 1. Organizadora End-to-End (Piloto Festa de Trindade) | 8/8 | Complete   | 2026-06-14 |
-| 2. Fornecedor Self-Service + Checkout PIX/Cartão | 2/8 | In Progress|  |
+| 2. Fornecedor Self-Service + Checkout PIX/Cartão | 5/8 | In Progress|  |
 | 3. Prestador + Comissionamento + Assinatura Recorrente | 0/TBD | Not started | - |
 | 4. Público — Ticketing, F&B, Marketplace, Integrações | 0/TBD | Not started | - |
 

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 02 plans 01+02 complete (2/8); PAUSED at session cap; reset 1:10pm Recife
-last_updated: "2026-06-15T13:10:00.000Z"
-last_activity: 2026-06-15 -- Plan 02-02 complete (signup + marketplace); paused on session cap
+stopped_at: Phase 02 plans 01..05 complete (5/8); PIVOTED to Coolify demo deploy
+last_updated: "2026-06-15T19:50:00.000Z"
+last_activity: 2026-06-15 -- Plans 02-03/04/05 landed; pausing exec for demo deploy at eventos.fbtax.cloud
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 23
-  completed_plans: 17
-  percent: 44
+  completed_plans: 20
+  percent: 51
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 02 (fornecedor-self-service-checkout-pix-cartao) — PAUSED (session cap)
-Plan: 2 of 8 complete (02-01 Wave-0 scaffold + 02-02 fornecedor signup + marketplace)
-Status: Paused on Claude session limit; reset 1:10pm Recife; resume `/gsd-execute-phase 2` for Wave 3 (02-03 lot reservation)
-Last activity: 2026-06-15 -- Plan 02-02 complete (6 commits on main, 9 new green tests, FORN-01+FORN-02 covered)
+Phase: 02 (fornecedor-self-service-checkout-pix-cartao) — PAUSED for demo deploy
+Plan: 5 of 8 complete (02-01 schemas, 02-02 signup+marketplace, 02-03 reservations, 02-04 SSE, 02-05 PIX/cartão checkout)
+Status: Pivoted to Coolify deploy of Phase 1 demo at eventos.fbtax.cloud; plans 02-06..02-08 pending
+Last activity: 2026-06-15 -- 5/8 plans landed; 246 tests passing; deploy roadmap drafted
 
 Progress: [██████████] 100% (structural)
 
