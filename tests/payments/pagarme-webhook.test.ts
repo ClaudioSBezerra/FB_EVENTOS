@@ -29,6 +29,7 @@
 //      in handler; worker handles re-fetch with graphile-worker retries).
 
 import { eq } from 'drizzle-orm'
+import { run } from 'graphile-worker'
 import { HttpResponse, http } from 'msw'
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
@@ -58,6 +59,23 @@ beforeAll(async () => {
   process.env.PAGARME_WEBHOOK_USER = WEBHOOK_USER
   process.env.PAGARME_WEBHOOK_PASS = WEBHOOK_PASS
   mocks.listen()
+
+  // Bootstrap graphile-worker schema (._private_jobs / ._private_tasks tables)
+  // by running a no-op worker once. Without this, the beforeEach cleanup
+  // below errors out on fresh CI DBs that haven't yet had any other test
+  // initialize graphile-worker. Same pattern as tests/contracts/zapsign-webhook.test.ts.
+  const migratorUrl = process.env.DATABASE_MIGRATOR_URL
+  if (!migratorUrl) throw new Error('DATABASE_MIGRATOR_URL is required')
+  const r = await run({
+    connectionString: migratorUrl,
+    taskList: {
+      [PAYMENT_PROCESS_WEBHOOK_TASK]: async () => {},
+      [EMAIL_STATUS_UPDATE_TASK]: async () => {},
+    },
+    concurrency: 1,
+    logger: undefined,
+  })
+  await r.stop()
 })
 
 beforeEach(async () => {
