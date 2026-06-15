@@ -25,9 +25,14 @@
 import postgres from 'postgres'
 import { env } from '@/lib/env'
 
-if (env.NODE_ENV !== 'test' && !env.DATABASE_MIGRATOR_URL) {
+const isBuildTime =
+  process.env.SKIP_ENV_VALIDATION === '1' || process.env.NEXT_PHASE === 'phase-production-build'
+
+if (!isBuildTime && env.NODE_ENV !== 'test' && !env.DATABASE_MIGRATOR_URL) {
   // In production we MUST have a migrator URL to power the webhook tenant
-  // lookup. In test the URL is read from process.env via setup.ts.
+  // lookup. In test the URL is read from process.env via setup.ts. In
+  // build-time (`next build` page-data collection), the runtime URL isn't
+  // available yet — Coolify supplies it at container start.
   throw new Error(
     'DATABASE_MIGRATOR_URL is required for the webhook tenant-resolution pool. ' +
       'Configure it via Coolify env (Plan 07) or .env.local.',

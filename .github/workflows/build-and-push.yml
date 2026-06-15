@@ -7,9 +7,13 @@ name: Build & push (semver only)
 #
 # To release:  pnpm version patch && git push --follow-tags
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  # Coolify builds the image directly from Git (see docs/deploy/DEPLOY-v0.1.0-DEMO.md).
+  # This workflow is kept as a manual-dispatch escape hatch for staging/prod
+  # promotion where versioned GHCR images become preferable.
+  workflow_dispatch:
+  # push:
+  #   tags:
+  #     - "v*.*.*"
 
 permissions:
   contents: read
