@@ -76,6 +76,16 @@ beforeAll(async () => {
     logger: undefined,
   })
   await r.stop()
+
+  // Install RLS policies on graphile_worker tables for fb_eventos_app.
+  // Migration 0009 created the helper function; in CI fresh DBs the
+  // graphile_worker tables don't exist at migration time, so the function
+  // is a no-op. After run() creates the tables, re-invoking attaches the
+  // `fb_eventos_app_full_access` policy on each — without this, the
+  // webhook handler's INSERT into _private_tasks fails with:
+  //   "new row violates row-level security policy for table _private_tasks"
+  // Same pattern as tests/jobs/worker-without-with-tenant.test.ts.
+  await migratorPool`SELECT fb_install_graphile_worker_policies()`
 })
 
 beforeEach(async () => {
