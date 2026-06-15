@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 02 plan 01 (Wave 0 scaffold) complete; PAUSED at monthly cap before plan 02-02
-last_updated: "2026-06-14T23:58:00.000Z"
-last_activity: 2026-06-14 -- Plan 02-01 complete (schemas + migrations + 18 test scaffolds); paused on cap
+stopped_at: Phase 02 plans 01+02 complete (2/8); PAUSED at session cap; reset 1:10pm Recife
+last_updated: "2026-06-15T13:10:00.000Z"
+last_activity: 2026-06-15 -- Plan 02-02 complete (signup + marketplace); paused on session cap
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 23
-  completed_plans: 16
-  percent: 42
+  completed_plans: 17
+  percent: 44
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 
 ## Current Position
 
-Phase: 02 (fornecedor-self-service-checkout-pix-cartao) — PAUSED (cap)
-Plan: 1 of 8 complete (02-01 Wave 0 scaffold landed; 02-02..02-08 pending)
-Status: Paused on monthly spend cap; resume after quota reset with `/gsd-execute-phase 2`
-Last activity: 2026-06-14 -- Plan 02-01 complete (4 commits on main); paused before 02-02 dispatch
+Phase: 02 (fornecedor-self-service-checkout-pix-cartao) — PAUSED (session cap)
+Plan: 2 of 8 complete (02-01 Wave-0 scaffold + 02-02 fornecedor signup + marketplace)
+Status: Paused on Claude session limit; reset 1:10pm Recife; resume `/gsd-execute-phase 2` for Wave 3 (02-03 lot reservation)
+Last activity: 2026-06-15 -- Plan 02-02 complete (6 commits on main, 9 new green tests, FORN-01+FORN-02 covered)
 
 Progress: [██████████] 100% (structural)
 
