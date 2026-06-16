@@ -43,98 +43,146 @@ ALTER POLICY tenant_isolation ON session
     OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
   );
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON organization
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON "member"
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON invitation
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON audit_log
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON consent_records
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON cart_addon_lines
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON contracts
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON event_addons
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON events
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON lot_assignments
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON lot_categories
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON lot_reservations
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON lot_waitlist
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON lots
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON outbox_events
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON pagarme_orders
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON payment_webhooks_inbox
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON payments
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON refund_requests
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON vendor_applications
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON vendor_consents
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON vendor_documents
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON vendors
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
+
+--> statement-breakpoint
 ALTER POLICY tenant_isolation ON zapsign_documents
   USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);

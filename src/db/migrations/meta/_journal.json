@@ -148,6 +148,13 @@
       "when": 1781480258270,
       "tag": "0020_tenants_phase2_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1781647701485,
+      "tag": "0021_rls_policies_nullif_safe",
+      "breakpoints": true
     }
   ]
 }

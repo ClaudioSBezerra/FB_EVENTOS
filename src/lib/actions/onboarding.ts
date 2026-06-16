@@ -34,6 +34,31 @@ import { tenants } from '@/db/schema/tenants'
 import { logger } from '@/lib/logger'
 import { SYSTEM_PREFIXES } from '@/lib/tenant-prefixes'
 
+// Extract everything postgres.js attaches to a query failure — `message` alone
+// loses the actual server response (code, detail, hint, position). Without
+// this we get "Failed query: ..." in the log and have no idea WHY.
+function extractDbError(err: unknown): Record<string, unknown> {
+  if (!(err instanceof Error)) return { err: String(err) }
+  const out: Record<string, unknown> = { err: err.message }
+  const e = err as Error & {
+    code?: string
+    detail?: string
+    hint?: string
+    schema_name?: string
+    table_name?: string
+    constraint_name?: string
+    cause?: unknown
+  }
+  if (e.code) out.code = e.code
+  if (e.detail) out.detail = e.detail
+  if (e.hint) out.hint = e.hint
+  if (e.schema_name) out.schema = e.schema_name
+  if (e.table_name) out.table = e.table_name
+  if (e.constraint_name) out.constraint = e.constraint_name
+  if (e.cause instanceof Error) out.cause = e.cause.message
+  return out
+}
+
 const slugRegex = /^[a-z][a-z0-9-]{2,30}$/
 
 const inputSchema = z.object({
@@ -80,9 +105,8 @@ export async function bootstrapOrganization(raw: unknown): Promise<BootstrapOrgR
       })
 
       // 2. Establish the tenant context so the FORCE RLS policies on
-      // organization + member accept the INSERTs. The `true` third arg to
-      // set_config makes it transaction-local; commits at COMMIT and
-      // vanishes on ROLLBACK.
+      // organization + member + session accept the writes. `true` 3rd arg
+      // makes the setting transaction-local; vanishes on COMMIT/ROLLBACK.
       await tx.execute(sql`SELECT set_config('app.current_tenant_id', ${newTenantId}::text, true)`)
 
       // 3. organization — id matches tenantId per Phase 0 invariant so
@@ -102,59 +126,50 @@ export async function bootstrapOrganization(raw: unknown): Promise<BootstrapOrgR
         userId,
         role: 'owner',
       })
+
+      // 5. Flip session.activeOrganizationId — DELIBERATELY KEEPING
+      //    session.tenant_id = NULL. Policy matches every getSession()
+      //    via the `IS NULL` branch regardless of setting (Better Auth
+      //    cookie-token lookup, no tenant scope yet). Downstream tenant
+      //    reads use session.activeOrganizationId (= tenant.id) as input
+      //    to withTenant().
+      //
+      //    WHY INSIDE THE TX (and not via auth.api.setActiveOrganization
+      //    or a separate UPDATE):
+      //      - auth.api.setActiveOrganization SELECTs `member` from the
+      //        singleton db adapter (no GUC) → RLS default-deny → "user
+      //        is not a member" → 500.
+      //      - A separate UPDATE on the singleton db has no GUC, so the
+      //        session policy's `current_setting('app.current_tenant_id',
+      //        true)::uuid` cast hits 22P02 on empty-string when planner
+      //        hoists the expression. Migration 0021 added NULLIF guard,
+      //        but doing the UPDATE here makes the GUC explicit and
+      //        survives even if a future regression reverts the NULLIF.
+      const updated = await tx
+        .update(sessionTable)
+        .set({
+          activeOrganizationId: newTenantId,
+          updatedAt: new Date(),
+        })
+        .where(eq(sessionTable.id, session.session.id))
+        .returning({ id: sessionTable.id })
+      if (updated.length !== 1) {
+        // Force the whole transaction to roll back — we will NOT leave a
+        // dangling tenants/organization/member triple if the session row
+        // can't be flipped.
+        throw new Error(`session_update_zero_rows:${session.session.id}`)
+      }
     })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    logger.error({ err: msg, userId, slug: parsed.data.slug }, 'bootstrap_org_tx_failed')
+    const detail = extractDbError(err)
+    logger.error(
+      { ...detail, userId, slug: parsed.data.slug, sessionId: session.session.id },
+      'bootstrap_org_tx_failed',
+    )
+    const msg = typeof detail.err === 'string' ? detail.err : ''
     if (/unique|duplicate|already exists/i.test(msg)) {
       return { ok: false, error: 'slug_taken' }
     }
-    return { ok: false, error: 'create_failed' }
-  }
-
-  // 5. Flip session.activeOrganizationId via a DIRECT UPDATE.
-  //
-  // Why NOT use auth.api.setActiveOrganization or the
-  // setActiveOrganizationForSession helper from set-active-org.ts:
-  //
-  //   - auth.api.setActiveOrganization validates membership by SELECTing
-  //     from the `member` table via the singleton drizzle adapter. That
-  //     adapter has NO `app.current_tenant_id` setting, and `member` has
-  //     FORCE RLS without a NULL fallback — so the SELECT returns zero
-  //     rows and Better Auth concludes "user is not a member" → 500.
-  //
-  //   - setActiveOrganizationForSession ALSO sets session.tenant_id to
-  //     newTenantId. That's fine for the row we own, but the policy on
-  //     `session` evaluates `tenant_id = current_setting(...)::uuid`
-  //     when tenant_id is NOT NULL — works in practice because the
-  //     planner short-circuits the `IS NULL OR` path, but coupling the
-  //     session row's tenant scope to a per-request setting is fragile.
-  //
-  // We DELIBERATELY KEEP session.tenant_id = NULL. The policy then matches
-  // every getSession() call via the `IS NULL` branch regardless of
-  // setting — exactly what Better Auth needs (cookie token lookup, no
-  // tenant scope yet). All downstream tenant-scoped reads use
-  // session.activeOrganizationId (= tenant.id by the Phase 0 invariant)
-  // as the input to withTenant().
-  try {
-    const updated = await db
-      .update(sessionTable)
-      .set({
-        activeOrganizationId: newTenantId,
-        updatedAt: new Date(),
-      })
-      .where(eq(sessionTable.id, session.session.id))
-      .returning({ id: sessionTable.id })
-    if (updated.length !== 1) {
-      logger.error(
-        { userId, orgId: newTenantId, sessionId: session.session.id, rowsAffected: updated.length },
-        'bootstrap_org_session_update_zero_rows',
-      )
-      return { ok: false, error: 'create_failed' }
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    logger.error({ err: msg, userId, orgId: newTenantId }, 'bootstrap_org_session_update_failed')
     return { ok: false, error: 'create_failed' }
   }
 
