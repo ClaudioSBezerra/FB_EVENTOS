@@ -166,8 +166,14 @@ export async function bootstrapOrganization(raw: unknown): Promise<BootstrapOrgR
       { ...detail, userId, slug: parsed.data.slug, sessionId: session.session.id },
       'bootstrap_org_tx_failed',
     )
-    const msg = typeof detail.err === 'string' ? detail.err : ''
-    if (/unique|duplicate|already exists/i.test(msg)) {
+    // postgres.js puts the unique-constraint phrasing in `cause`, not `message`
+    // (Drizzle wraps the actual server error). Inspect both — and also the
+    // postgres SQLSTATE code 23505 (unique_violation) which is the most
+    // reliable signal.
+    const msgParts = [detail.err, detail.cause, detail.detail, detail.code]
+      .filter((p): p is string => typeof p === 'string')
+      .join(' | ')
+    if (detail.code === '23505' || /unique|duplicate|already exists/i.test(msgParts)) {
       return { ok: false, error: 'slug_taken' }
     }
     return { ok: false, error: 'create_failed' }
