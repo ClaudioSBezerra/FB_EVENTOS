@@ -121,12 +121,24 @@ export async function startWorker(): Promise<Runner> {
     // create lives in graphile-worker's bundled SQL. In production this
     // runs once on first deploy (idempotent on subsequent boots).
     noHandleSignals: false,
-    // Phase 2 (Plan 02-03): populate crontab with recurring jobs.
-    //   - reservation.expire: every minute (AM-03 — 1 min is graphile-worker minimum).
-    //     Releases lot_reservations rows where expires_at < now() AND released_at IS NULL.
-    //   - outbox.drain: registered in Plan 02-06 (outbox drain handler).
-    // Graphile-worker crontab format: "* * * * * taskIdentifier [options]"
-    crontab: '* * * * * reservation.expire\n',
+    // ─────────────────────────────────────────────────────────────────────
+    // CRONTAB DISABLED FOR DEMO — graphile-worker's crontab parser uses the
+    // regex /[_a-zA-Z][_a-zA-Z0-9-]*/ for the task identifier (NO DOTS),
+    // so `* * * * * reservation.expire` crashes the runner at boot with
+    // "Invalid command specification in line 1 of crontab".
+    //
+    // The task IDENTIFIER itself (used by addJob and taskList registration)
+    // accepts dots — only the CRONTAB STRING parser doesn't.
+    //
+    // To restore Phase 2 plan 02-03's auto-expiry (every minute), either:
+    //   a) Rename the task to `reservation_expire` everywhere
+    //   b) Replace crontab with a setInterval(addJob, 60_000) at boot
+    //   c) Use a separate cron service that calls addJob via HTTP
+    //
+    // For Phase 1 demo (organizadora flow only — fornecedor reservations
+    // aren't created until Phase 2), crontab is dead weight. Remove the
+    // entire `crontab:` line to unblock the worker.
+    // ─────────────────────────────────────────────────────────────────────
     taskList,
   })
 
