@@ -32,7 +32,6 @@ services:
       target: web-runner
       args:
         APP_VERSION: ${APP_VERSION:-0.1.0}
-    container_name: fb-eventos-web
     restart: always
     ports:
       - "3000:3000"
@@ -119,7 +118,6 @@ services:
       target: worker-runner
       args:
         APP_VERSION: ${APP_VERSION:-0.1.0}
-    container_name: fb-eventos-migrate
     restart: "no"
     command: ["node_modules/.bin/tsx", "src/db/migrate.ts"]
     environment:
@@ -147,7 +145,6 @@ services:
       target: worker-runner
       args:
         APP_VERSION: ${APP_VERSION:-0.1.0}
-    container_name: fb-eventos-worker
     restart: always
     environment:
       DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD:-postgres}@postgres:5432/fb_eventos_dev
@@ -193,7 +190,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.postgres
-    container_name: fb-eventos-postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -224,7 +220,6 @@ services:
   # ---------------------------------------------------------------------------
   minio:
     image: minio/minio:RELEASE.2025-01-20T14-49-07Z
-    container_name: fb-eventos-minio
     restart: always
     command: server /data --console-address ':9001'
     environment:
