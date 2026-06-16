@@ -56,9 +56,8 @@ ENV SKIP_ENV_VALIDATION=1
 # Web: produces .next/standalone + .next/static.
 RUN pnpm build
 
-# Worker: produces dist-worker/ (compiled by tsconfig.worker.json — only
-# src/jobs/**, scripts/jobs/**, src/lib/**, src/db/**, src/auth/server.ts).
-RUN pnpm build:worker
+# Worker no longer pre-compiled — runs source .ts via tsx in the worker
+# runner stage. See `worker-runner` block below for rationale.
 
 # ─── Stage 3a: web-runner ──────────────────────────────────────────────────
 # Next.js standalone server. Port 3000. Healthcheck via /api/health.
@@ -94,6 +93,20 @@ CMD ["node", "server.js"]
 
 # ─── Stage 3b: worker-runner ───────────────────────────────────────────────
 # Graphile-Worker process. No port. Drains in-flight jobs on SIGTERM.
+#
+# We run the worker via tsx against the original TypeScript source (NOT a
+# compiled bundle). Why:
+#   - tsconfig path aliases (`@/lib/env`, `@/db/schema/...`) need a runtime
+#     resolver. The previous compiled-to-dist-worker approach hit
+#     ERR_MODULE_NOT_FOUND on every relative + alias import because:
+#       * "module: ESNext" emits ES module syntax without .js extensions
+#         (Node 22 ESM requires extensions; CJS would parse-error on `import`)
+#       * src/db/migrate.ts uses `import.meta.url` (forbidden in CJS targets)
+#       * path aliases are erased at compile time
+#   - tsx handles all of the above natively: ESM/CJS interop, .ts source,
+#     tsconfig path resolution. It's the same tool `pnpm worker:dev` already
+#     uses successfully.
+#   - Trade-off: slightly slower cold start (~1s) but zero ambiguity.
 FROM node:22-alpine AS worker-runner
 WORKDIR /app
 
@@ -103,11 +116,18 @@ ENV TZ=America/Sao_Paulo
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 worker
 
+# node_modules includes tsx (kept in devDependencies but installed because
+# the deps stage above runs `pnpm install --frozen-lockfile` without --prod).
 COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=worker:nodejs /app/dist-worker  ./dist-worker
-# Ship migrations so graphile-worker installs its schema on first boot.
-COPY --from=builder --chown=worker:nodejs /app/src/db/migrations ./src/db/migrations
-COPY --from=builder --chown=worker:nodejs /app/package.json ./package.json
+# Source files the worker imports — keep parity with tsconfig.worker.json
+# `include` list (src/jobs, scripts/jobs, src/lib, src/db, src/auth).
+COPY --from=builder --chown=worker:nodejs /app/src/jobs      ./src/jobs
+COPY --from=builder --chown=worker:nodejs /app/scripts/jobs  ./scripts/jobs
+COPY --from=builder --chown=worker:nodejs /app/src/lib       ./src/lib
+COPY --from=builder --chown=worker:nodejs /app/src/db        ./src/db
+COPY --from=builder --chown=worker:nodejs /app/src/auth      ./src/auth
+COPY --from=builder --chown=worker:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=worker:nodejs /app/package.json  ./package.json
 
 USER worker
 
@@ -116,7 +136,7 @@ ENV APP_VERSION=${APP_VERSION}
 LABEL org.opencontainers.image.title="fb-eventos-worker"
 LABEL org.opencontainers.image.version="${APP_VERSION}"
 
-CMD ["node", "dist-worker/scripts/jobs/start-worker.js"]
+CMD ["node_modules/.bin/tsx", "scripts/jobs/start-worker.ts"]
 
 # ─── Default target alias for backwards compatibility ──────────────────────
 # `docker build -f docker/Dockerfile .` without --target produces web-runner

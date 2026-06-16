@@ -1,10 +1,15 @@
 {
+  // NOTE: `pnpm build:worker` is no longer used by the production runtime
+  // (the Coolify deploy runs the source .ts files directly via tsx — see
+  // docker/Dockerfile worker-runner stage). This config is kept for the
+  // `pnpm typecheck:worker` story so worker-only TS errors still surface
+  // separately from the Next.js typecheck — only `noEmit: true` matters.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "dist-worker",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "noEmit": false,
+    "noEmit": true,
     "jsx": "preserve",
     "plugins": []
   },
