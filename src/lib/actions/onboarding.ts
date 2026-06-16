@@ -22,14 +22,14 @@
 
 'use server'
 
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { headers as nextHeaders } from 'next/headers'
 import { z } from 'zod'
 
 import { auth } from '@/auth/server'
 import { db } from '@/db'
-import { member, organization } from '@/db/schema/auth'
+import { member, organization, session as sessionTable } from '@/db/schema/auth'
 import { tenants } from '@/db/schema/tenants'
 import { logger } from '@/lib/logger'
 import { SYSTEM_PREFIXES } from '@/lib/tenant-prefixes'
@@ -112,19 +112,49 @@ export async function bootstrapOrganization(raw: unknown): Promise<BootstrapOrgR
     return { ok: false, error: 'create_failed' }
   }
 
-  // 5. Flip session.activeOrganizationId + session.tenant_id via the
-  //    canonical Better Auth endpoint. This fires the
-  //    databaseHooks.session.update.before hook installed in auth/server.ts
-  //    which injects session.tenant_id alongside activeOrganizationId — the
-  //    custom helper we used previously bypassed that hook.
+  // 5. Flip session.activeOrganizationId via a DIRECT UPDATE.
+  //
+  // Why NOT use auth.api.setActiveOrganization or the
+  // setActiveOrganizationForSession helper from set-active-org.ts:
+  //
+  //   - auth.api.setActiveOrganization validates membership by SELECTing
+  //     from the `member` table via the singleton drizzle adapter. That
+  //     adapter has NO `app.current_tenant_id` setting, and `member` has
+  //     FORCE RLS without a NULL fallback — so the SELECT returns zero
+  //     rows and Better Auth concludes "user is not a member" → 500.
+  //
+  //   - setActiveOrganizationForSession ALSO sets session.tenant_id to
+  //     newTenantId. That's fine for the row we own, but the policy on
+  //     `session` evaluates `tenant_id = current_setting(...)::uuid`
+  //     when tenant_id is NOT NULL — works in practice because the
+  //     planner short-circuits the `IS NULL OR` path, but coupling the
+  //     session row's tenant scope to a per-request setting is fragile.
+  //
+  // We DELIBERATELY KEEP session.tenant_id = NULL. The policy then matches
+  // every getSession() call via the `IS NULL` branch regardless of
+  // setting — exactly what Better Auth needs (cookie token lookup, no
+  // tenant scope yet). All downstream tenant-scoped reads use
+  // session.activeOrganizationId (= tenant.id by the Phase 0 invariant)
+  // as the input to withTenant().
   try {
-    await auth.api.setActiveOrganization({
-      body: { organizationId: newTenantId },
-      headers: h,
-    })
+    const updated = await db
+      .update(sessionTable)
+      .set({
+        activeOrganizationId: newTenantId,
+        updatedAt: new Date(),
+      })
+      .where(eq(sessionTable.id, session.session.id))
+      .returning({ id: sessionTable.id })
+    if (updated.length !== 1) {
+      logger.error(
+        { userId, orgId: newTenantId, sessionId: session.session.id, rowsAffected: updated.length },
+        'bootstrap_org_session_update_zero_rows',
+      )
+      return { ok: false, error: 'create_failed' }
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    logger.error({ err: msg, userId, orgId: newTenantId }, 'bootstrap_org_set_active_failed')
+    logger.error({ err: msg, userId, orgId: newTenantId }, 'bootstrap_org_session_update_failed')
     return { ok: false, error: 'create_failed' }
   }
 
