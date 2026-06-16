@@ -53,3 +53,4 @@ next-env.d.ts
 *.sqlite
 *.sqlite3
 tracker-*.db
+dist-worker/
