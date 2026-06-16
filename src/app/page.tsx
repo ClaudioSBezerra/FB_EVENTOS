@@ -39,12 +39,9 @@ export default async function Home() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
       {/* Top bar */}
       <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            FB<span className="text-emerald-600">_</span>EVENTOS
-          </Link>
-          <nav className="flex items-center gap-2">
-            <Button variant="ghost" asChild>
+        <div className="mx-auto flex max-w-6xl items-center justify-end px-6 py-4">
+          <nav className="flex items-center gap-3">
+            <Button variant="outline" asChild>
               <Link href="/login">Entrar</Link>
             </Button>
             <Button asChild>
@@ -72,13 +69,15 @@ export default async function Home() {
           <Button size="lg" asChild>
             <Link href="/signup">Comece grátis →</Link>
           </Button>
-          <Button size="lg" variant="outline" asChild>
+          <Button
+            size="lg"
+            variant="outline"
+            asChild
+            className="border-slate-300 bg-white text-slate-900 hover:bg-slate-100"
+          >
             <Link href="/login">Já tenho conta</Link>
           </Button>
         </div>
-        <p className="mt-6 text-sm text-slate-500">
-          Demonstração em piloto na Festa de Trindade/GO · 900 mil pessoas
-        </p>
       </section>
 
       {/* Features */}
