@@ -3,9 +3,9 @@ import { ConsentBanner } from '@/components/consent-banner'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'FB_EVENTOS',
+  title: 'FB_EVENTOS · Gestão de grandes eventos',
   description:
-    'Plataforma SaaS de gestão de grandes eventos — venda de espaços, ingressos e operação ponta-a-ponta.',
+    'Venda de espaços com planta visual, checkout PIX integrado, contratos digitais e comissionamento. Sem WhatsApp, sem planilha.',
 }
 
 export default function RootLayout({
