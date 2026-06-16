@@ -148,13 +148,17 @@ services:
   # PostgreSQL 16 — single source of truth (contractual ban on embedded DBs).
   # ---------------------------------------------------------------------------
   postgres:
-    image: postgres:16-alpine
+    # Custom image extends postgres:16-alpine with init scripts baked in.
+    # The previous bind-mount approach (./scripts/db/init:/docker-entrypoint-initdb.d:ro)
+    # silently failed in Coolify build-from-Git deploys — Postgres logged
+    # `ignoring /docker-entrypoint-initdb.d/*` (empty dir). See docker/Dockerfile.postgres.
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.postgres
     container_name: fb-eventos-postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
-      # Default superuser password for demo. Override in Coolify UI via
-      # POSTGRES_SUPERUSER_PASSWORD for any production-adjacent deploy.
       POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
       POSTGRES_DB: postgres
       # Forwarded into the init scripts (scripts/db/init/01-roles.sh) so
@@ -170,11 +174,7 @@ services:
       - -c
       - shared_buffers=256MB
     volumes:
-      - postgres_data_v2:/var/lib/postgresql/data
-      # Auto-bootstrap roles, login users, extensions on first volume init.
-      # docker-entrypoint-initdb.d is a Postgres image convention — every
-      # .sh / .sql file runs in alphabetical order as the superuser.
-      - ./scripts/db/init:/docker-entrypoint-initdb.d:ro
+      - postgres_data_v3:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s
@@ -215,5 +215,5 @@ services:
       start_period: 30s
 
 volumes:
-  postgres_data_v2:
+  postgres_data_v3:
   minio_data_v2:

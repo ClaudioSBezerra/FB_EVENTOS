@@ -1,0 +1,25 @@
+# FB_EVENTOS Postgres image — extends the official postgres:16-alpine with
+# the FB_EVENTOS init scripts baked in.
+#
+# Why we don't bind-mount scripts/db/init/ via docker-compose.yml volumes:
+#   Coolify's build-from-Git deploy clones the repo to /artifacts/<hash>/
+#   and starts the compose stack from there. The bind mount
+#   `./scripts/db/init:/docker-entrypoint-initdb.d:ro` looked correct (the
+#   project-directory is set to /artifacts/<hash>) but consistently
+#   resulted in an empty /docker-entrypoint-initdb.d inside the container.
+#   Postgres entrypoint logs:
+#       ignoring /docker-entrypoint-initdb.d/*
+#   The literal `*` means the shell glob didn't expand — dir was empty.
+#   Possible Coolify-side cause: relative-path bind mounts may be silently
+#   dropped, or :ro mounts may not survive the volume layer.
+#
+# Solution: ship the scripts inside the image. Postgres image runs every
+# file in /docker-entrypoint-initdb.d at first volume init.
+
+FROM postgres:16-alpine
+
+# Copy init scripts directly into the image. Postgres runs them ONCE on
+# first volume init, in alphabetical order, as the POSTGRES_USER (superuser).
+COPY --chmod=755 scripts/db/init/ /docker-entrypoint-initdb.d/
+
+# No CMD override — inherit postgres image entrypoint behavior.
