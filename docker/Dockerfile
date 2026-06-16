@@ -119,13 +119,15 @@ RUN addgroup --system --gid 1001 nodejs \
 # node_modules includes tsx (kept in devDependencies but installed because
 # the deps stage above runs `pnpm install --frozen-lockfile` without --prod).
 COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
-# Source files the worker imports — keep parity with tsconfig.worker.json
-# `include` list (src/jobs, scripts/jobs, src/lib, src/db, src/auth).
+# Source files the worker imports — derived from `grep -rh "from '@/" `
+# inside src/jobs + scripts/jobs to find every transitively-needed src/* dir:
+#   @/auth, @/contracts, @/db, @/jobs, @/lib
 COPY --from=builder --chown=worker:nodejs /app/src/jobs      ./src/jobs
 COPY --from=builder --chown=worker:nodejs /app/scripts/jobs  ./scripts/jobs
 COPY --from=builder --chown=worker:nodejs /app/src/lib       ./src/lib
 COPY --from=builder --chown=worker:nodejs /app/src/db        ./src/db
 COPY --from=builder --chown=worker:nodejs /app/src/auth      ./src/auth
+COPY --from=builder --chown=worker:nodejs /app/src/contracts ./src/contracts
 COPY --from=builder --chown=worker:nodejs /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=worker:nodejs /app/package.json  ./package.json
 
