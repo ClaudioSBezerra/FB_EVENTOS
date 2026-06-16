@@ -36,14 +36,33 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    # Explicit Traefik labels — Coolify's auto-detection via SERVICE_FQDN_WEB
+    # did not generate the router for the compose-mode app (deploy went green
+    # but Traefik returned 404 for eventos.fbtax.cloud requests). These labels
+    # bypass Coolify's auto-magic and configure Traefik directly:
+    #   - http router redirects 80 → 443 (HTTPS-only)
+    #   - https router serves the Host with Let's Encrypt cert
+    #   - service backend = this container on port 3000
+    # Coolify's default Traefik entrypoints are `http` and `https`, default
+    # cert resolver is `letsencrypt`. If your Coolify proxy uses different
+    # names, adjust the entrypoints / certresolver values below.
+    labels:
+      - "traefik.enable=true"
+      # HTTPS router
+      - "traefik.http.routers.fb-eventos-web-https.rule=Host(`eventos.fbtax.cloud`)"
+      - "traefik.http.routers.fb-eventos-web-https.entrypoints=https"
+      - "traefik.http.routers.fb-eventos-web-https.tls=true"
+      - "traefik.http.routers.fb-eventos-web-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.fb-eventos-web-https.service=fb-eventos-web-svc"
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.fb-eventos-web-http.rule=Host(`eventos.fbtax.cloud`)"
+      - "traefik.http.routers.fb-eventos-web-http.entrypoints=http"
+      - "traefik.http.routers.fb-eventos-web-http.middlewares=fb-eventos-redirect"
+      - "traefik.http.middlewares.fb-eventos-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.fb-eventos-redirect.redirectscheme.permanent=true"
+      # Backend service
+      - "traefik.http.services.fb-eventos-web-svc.loadbalancer.server.port=3000"
     environment:
-      # Coolify magic env var: tells Traefik to route this domain → this
-      # service's HTTP port. Without it, Coolify routes the Application's
-      # domain to the FIRST exposed port across all services in the compose
-      # (which can be minio:9000 instead of web:3000). The value falls back
-      # to https://eventos.fbtax.cloud for the demo; Coolify UI Domains
-      # field overrides via the env-var-passthrough mechanism.
-      SERVICE_FQDN_WEB: ${SERVICE_FQDN_WEB:-https://eventos.fbtax.cloud}
 
       # Database (NOBYPASSRLS runtime role). Password defaults match the
       # init script — Coolify UI should override only if it differs.
