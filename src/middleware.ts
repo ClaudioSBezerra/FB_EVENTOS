@@ -51,7 +51,32 @@ export function middleware(req: NextRequest): NextResponse {
   const isSystemPath = firstSegment === '' || SYSTEM_PREFIXES.has(firstSegment)
   const tenantSlug = isSystemPath ? null : firstSegment
 
-  // 3. Build the response with the headers forwarded to downstream code
+  // 3. Structured access log — Edge runtime cannot use Pino, but a raw
+  //    JSON.stringify on stdout is shape-compatible with the Pino lines
+  //    Coolify already ingests from the Server Components / Worker. Lets
+  //    operators tail the `web` container and see every hit with method,
+  //    path, requestId, tenantSlug, no extra dashboards needed. Internal
+  //    Next.js noise (HMR, RSC fetches for prefetch) is filtered.
+  if (
+    !pathname.startsWith('/_next') &&
+    !pathname.startsWith('/__nextjs') &&
+    pathname !== '/favicon.ico'
+  ) {
+    console.log(
+      JSON.stringify({
+        level: 30,
+        time: Date.now(),
+        service: 'fb-eventos-web',
+        msg: 'http_request',
+        method: req.method,
+        path: pathname,
+        requestId,
+        tenantSlug: tenantSlug ?? undefined,
+      }),
+    )
+  }
+
+  // 4. Build the response with the headers forwarded to downstream code
   //    (Server Components, Server Actions, Route Handlers) via the request
   //    object AND echoed back on the response for client/log correlation.
   const requestHeaders = new Headers(req.headers)
