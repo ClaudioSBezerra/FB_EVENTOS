@@ -18,6 +18,7 @@ import { auth } from '@/auth/server'
 import { OnboardingForm } from '@/components/onboarding/onboarding-form'
 import { organization } from '@/db/schema/auth'
 import { withTenant } from '@/db/with-tenant'
+import { logger } from '@/lib/logger'
 
 export const metadata = {
   title: 'Configurar organização · FB_EVENTOS',
@@ -25,7 +26,13 @@ export const metadata = {
 
 export default async function OnboardingPage() {
   const h = await nextHeaders()
-  const session = await auth.api.getSession({ headers: h })
+  const session = await auth.api.getSession({ headers: h }).catch((err) => {
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      'onboarding_get_session_failed',
+    )
+    return null
+  })
 
   if (!session) {
     redirect('/login')
@@ -33,14 +40,31 @@ export default async function OnboardingPage() {
 
   const activeOrgId = session.session.activeOrganizationId
   if (activeOrgId) {
-    const slug = await withTenant(activeOrgId, async (scopedDb) => {
-      const rows = await scopedDb
-        .select({ slug: organization.slug })
-        .from(organization)
-        .where(eq(organization.id, activeOrgId))
-        .limit(1)
-      return rows[0]?.slug ?? null
-    })
+    // Best-effort slug resolution. If the lookup throws (RLS rejection,
+    // dangling activeOrgId pointing at a missing organization, DB hiccup)
+    // we DO NOT 500 the page — we log, fall through, and let the user
+    // re-create the org via the form. That recovers users who land here
+    // with a stale session pointing at an organization that does not exist.
+    let slug: string | null = null
+    try {
+      slug = await withTenant(activeOrgId, async (scopedDb) => {
+        const rows = await scopedDb
+          .select({ slug: organization.slug })
+          .from(organization)
+          .where(eq(organization.id, activeOrgId))
+          .limit(1)
+        return rows[0]?.slug ?? null
+      })
+    } catch (err) {
+      logger.error(
+        {
+          err: err instanceof Error ? err.message : String(err),
+          activeOrgId,
+          userId: session.user.id,
+        },
+        'onboarding_slug_lookup_failed',
+      )
+    }
     if (slug) redirect(`/${slug}/dashboard`)
   }
 

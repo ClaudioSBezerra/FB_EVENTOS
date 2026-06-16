@@ -23,6 +23,7 @@
 'use server'
 
 import { sql } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 import { headers as nextHeaders } from 'next/headers'
 import { z } from 'zod'
 
@@ -30,7 +31,7 @@ import { auth } from '@/auth/server'
 import { db } from '@/db'
 import { member, organization } from '@/db/schema/auth'
 import { tenants } from '@/db/schema/tenants'
-import { setActiveOrganizationForSession } from '@/lib/auth/set-active-org'
+import { logger } from '@/lib/logger'
 import { SYSTEM_PREFIXES } from '@/lib/tenant-prefixes'
 
 const slugRegex = /^[a-z][a-z0-9-]{2,30}$/
@@ -67,7 +68,6 @@ export async function bootstrapOrganization(raw: unknown): Promise<BootstrapOrgR
   }
 
   const userId = session.user.id
-  const sessionId = session.session.id
   const newTenantId = crypto.randomUUID()
 
   try {
@@ -105,18 +105,32 @@ export async function bootstrapOrganization(raw: unknown): Promise<BootstrapOrgR
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
+    logger.error({ err: msg, userId, slug: parsed.data.slug }, 'bootstrap_org_tx_failed')
     if (/unique|duplicate|already exists/i.test(msg)) {
       return { ok: false, error: 'slug_taken' }
     }
     return { ok: false, error: 'create_failed' }
   }
 
-  // 5. Flip session.activeOrganizationId + session.tenant_id so the next
-  // request resolves to the new tenant scope.
-  const flipped = await setActiveOrganizationForSession(sessionId, newTenantId)
-  if (!flipped) {
+  // 5. Flip session.activeOrganizationId + session.tenant_id via the
+  //    canonical Better Auth endpoint. This fires the
+  //    databaseHooks.session.update.before hook installed in auth/server.ts
+  //    which injects session.tenant_id alongside activeOrganizationId — the
+  //    custom helper we used previously bypassed that hook.
+  try {
+    await auth.api.setActiveOrganization({
+      body: { organizationId: newTenantId },
+      headers: h,
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error({ err: msg, userId, orgId: newTenantId }, 'bootstrap_org_set_active_failed')
     return { ok: false, error: 'create_failed' }
   }
+
+  // 6. Bust the Server Component cache for routes that depend on the
+  //    session so the redirect lands on a freshly-rendered dashboard.
+  revalidatePath('/', 'layout')
 
   return { ok: true, slug: parsed.data.slug }
 }
