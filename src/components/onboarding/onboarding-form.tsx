@@ -17,7 +17,6 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-import { authClient } from '@/auth/client'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -28,6 +27,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { bootstrapOrganization } from '@/lib/actions/onboarding'
 import { SYSTEM_PREFIXES } from '@/lib/tenant-prefixes'
 
 const slugRegex = /^[a-z][a-z0-9-]{2,30}$/
@@ -57,26 +57,35 @@ export function OnboardingForm() {
   async function onSubmit(values: OnboardingFormValues) {
     setSubmitError(null)
 
-    const result = await authClient.organization.create({
+    // Use the Server Action instead of authClient.organization.create():
+    // Better Auth's native endpoint INSERTs into `organization` without a
+    // tenant_id, but our schema requires it (NOT NULL + FK to `tenants`),
+    // so the native call 500s. bootstrapOrganization handles the full
+    // tenants + organization + member transaction and flips the active
+    // org on the session.
+    const result = await bootstrapOrganization({
       name: values.orgName,
       slug: values.orgSlug,
     })
 
-    if (result.error) {
-      const message = result.error.message ?? ''
-      if (/slug|exists|taken/i.test(message)) {
+    if (!result.ok) {
+      if (result.error === 'slug_taken') {
         form.setError('orgSlug', {
-          message: 'Esse slug já está em uso ou inválido. Tente outro.',
+          message: 'Esse slug já está em uso. Tente outro.',
         })
+        return
+      }
+      if (result.error === 'already_has_org') {
+        router.replace('/')
         return
       }
       setSubmitError('Não foi possível criar a organização. Tente novamente em alguns segundos.')
       return
     }
 
-    // Better Auth set the new org as active. Redirect via /; the home server
-    // component resolves activeOrgId → slug and forwards to the dashboard.
-    router.replace('/')
+    // Server Action set the session's active org. Land directly on the
+    // tenant dashboard — no extra round-trip through /.
+    router.replace(`/${result.slug}/dashboard`)
   }
 
   return (
