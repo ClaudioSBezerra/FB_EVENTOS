@@ -37,6 +37,14 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # Coolify magic env var: tells Traefik to route this domain → this
+      # service's HTTP port. Without it, Coolify routes the Application's
+      # domain to the FIRST exposed port across all services in the compose
+      # (which can be minio:9000 instead of web:3000). The value falls back
+      # to https://eventos.fbtax.cloud for the demo; Coolify UI Domains
+      # field overrides via the env-var-passthrough mechanism.
+      SERVICE_FQDN_WEB: ${SERVICE_FQDN_WEB:-https://eventos.fbtax.cloud}
+
       # Database (NOBYPASSRLS runtime role). Password defaults match the
       # init script — Coolify UI should override only if it differs.
       DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD:-postgres}@postgres:5432/fb_eventos_dev
