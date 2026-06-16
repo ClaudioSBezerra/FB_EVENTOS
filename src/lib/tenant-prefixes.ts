@@ -20,6 +20,7 @@ export const SYSTEM_PREFIXES = new Set([
   'health',
   '2fa',
   'admin',
+  'docs',
   'favicon.ico',
   'robots.txt',
   'sitemap.xml',
