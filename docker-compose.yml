@@ -101,7 +101,13 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      # IMPORTANTE: 127.0.0.1 explícito, NÃO `localhost`.
+      # Alpine resolve `localhost` para IPv6 (::1) primeiro, mas Next.js
+      # standalone bind é só IPv4 (HOSTNAME=0.0.0.0). Resultado: healthcheck
+      # com `localhost` recebe "Connection refused" mesmo com listener vivo
+      # em 0.0.0.0:3000. Diagnosticado via /proc/net/tcp mostrando LISTEN
+      # em 00000000:0BB8 enquanto `wget localhost:3000` recusava conexão.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 5
