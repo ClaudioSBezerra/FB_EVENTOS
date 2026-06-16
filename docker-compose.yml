@@ -93,12 +93,42 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Migrate — one-shot service that applies Drizzle migrations before web +
+  # worker start. Reuses the worker-runner image (already has tsx + source).
+  # ---------------------------------------------------------------------------
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: worker-runner
+      args:
+        APP_VERSION: ${APP_VERSION:-0.1.0}
+    container_name: fb-eventos-migrate
+    restart: "no"
+    command: ["node_modules/.bin/tsx", "src/db/migrate.ts"]
+    environment:
+      DATABASE_MIGRATOR_URL: postgresql://fb_migrator:${FB_MIGRATOR_PASSWORD:-postgres}@postgres:5432/fb_eventos_dev
+      MIGRATION_RUNTIME: "1"
+      # Other env vars are unused by migrate.ts but required by env.ts validation
+      DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD:-postgres}@postgres:5432/fb_eventos_dev
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-fb-eventos-demo-secret-replace-in-prod-please-32+chars}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://eventos.fbtax.cloud}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://eventos.fbtax.cloud}
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # ---------------------------------------------------------------------------
   # Graphile-Worker — background jobs (email send, outbox drain, reservation
@@ -143,6 +173,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   # ---------------------------------------------------------------------------
   # PostgreSQL 16 — single source of truth (contractual ban on embedded DBs).
@@ -174,7 +206,7 @@ services:
       - -c
       - shared_buffers=256MB
     volumes:
-      - postgres_data_v3:/var/lib/postgresql/data
+      - postgres_data_v4:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s
@@ -215,5 +247,5 @@ services:
       start_period: 30s
 
 volumes:
-  postgres_data_v3:
+  postgres_data_v4:
   minio_data_v2:

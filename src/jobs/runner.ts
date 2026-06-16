@@ -35,11 +35,45 @@
 // context — Phase 2 outbox pattern enforces this).
 
 import { type Runner, run } from 'graphile-worker'
+import postgres from 'postgres'
 
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
 import { taskList } from './tasks'
+
+/**
+ * After graphile-worker creates its schema + tables (on first run), invoke
+ * the helper from migration 0009 to attach the `fb_eventos_app_full_access`
+ * RLS policy on every graphile_worker.* table. Without this, fb_app_user
+ * loses visibility on its own queue once Postgres RLS kicks in via the
+ * NOBYPASSRLS contract — proven by tests/jobs/worker-without-with-tenant.test.ts.
+ *
+ * Uses DATABASE_MIGRATOR_URL because the helper function is owned by
+ * fb_eventos_migrator. Connection is one-shot (max 1, close immediately).
+ */
+async function ensureGraphileWorkerPolicies(): Promise<void> {
+  const migratorUrl = env.DATABASE_MIGRATOR_URL ?? process.env.DATABASE_MIGRATOR_URL
+  if (!migratorUrl) {
+    logger.warn(
+      { component: 'graphile-worker' },
+      'DATABASE_MIGRATOR_URL not set — skipping RLS policy install. Worker may fail to read its queue.',
+    )
+    return
+  }
+  const sql = postgres(migratorUrl, { max: 1 })
+  try {
+    await sql`SELECT fb_install_graphile_worker_policies()`
+    logger.info({ component: 'graphile-worker' }, 'graphile_worker RLS policies attached')
+  } catch (err) {
+    logger.warn(
+      { component: 'graphile-worker', err: err instanceof Error ? err.message : String(err) },
+      'install_graphile_worker_policies failed (function may not exist yet — run migrations)',
+    )
+  } finally {
+    await sql.end({ timeout: 2 })
+  }
+}
 
 /**
  * Boot the Graphile-Worker Runner. Returns the Runner instance so callers
@@ -56,6 +90,29 @@ export async function startWorker(): Promise<Runner> {
     'starting worker',
   )
 
+  // Step 1: bootstrap graphile_worker schema using migrator role (BYPASSRLS,
+  // CREATEDB). Without this the runner.run() call below fails with
+  // "permission denied for database fb_eventos_dev" when graphile-worker
+  // tries to CREATE SCHEMA graphile_worker as fb_app_user. We open a
+  // one-shot worker that immediately stops — its only purpose is to trigger
+  // graphile-worker's bundled bootstrap SQL with elevated privileges.
+  const migratorUrl = env.DATABASE_MIGRATOR_URL ?? process.env.DATABASE_MIGRATOR_URL
+  if (migratorUrl) {
+    logger.info(
+      { component: 'graphile-worker' },
+      'bootstrapping graphile_worker schema via migrator role',
+    )
+    const bootstrapRunner = await run({
+      connectionString: migratorUrl,
+      taskList: { __bootstrap: async () => {} },
+      concurrency: 1,
+    })
+    await bootstrapRunner.stop()
+    // Step 2: attach RLS policies so fb_app_user can read its own queue.
+    await ensureGraphileWorkerPolicies()
+  }
+
+  // Step 3: start the real runner as fb_app_user (NOBYPASSRLS — Phase 0 contract).
   const runner = await run({
     connectionString: env.DATABASE_URL,
     concurrency: 5,

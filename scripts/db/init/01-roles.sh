@@ -67,6 +67,15 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname fb_eventos_dev <<-E
   -- migration fails with "permission denied for schema public".
   GRANT USAGE, CREATE ON SCHEMA public TO fb_eventos_sysreader;
   GRANT fb_eventos_sysreader TO fb_eventos_migrator;
+  -- Graphile-Worker bootstrap (Phase 0 Plan 06): the runner connects as
+  -- fb_app_user and lazily creates the \`graphile_worker\` schema + tables
+  -- on first boot. Without CREATE on the database, the runner crashes
+  -- with "permission denied for database fb_eventos_dev". Granting this
+  -- is intentional — fb_eventos_app remains NOBYPASSRLS so tenant
+  -- isolation on domain tables stays intact; the relaxed grant only lets
+  -- the role own its own queue schema. See migration 0009 for the RLS
+  -- policy that gets attached after the worker schema exists.
+  GRANT CREATE ON DATABASE fb_eventos_dev TO fb_eventos_app;
 EOSQL
 
 echo "[01-roles.sh] OK — roles created, db fb_eventos_dev ready"
