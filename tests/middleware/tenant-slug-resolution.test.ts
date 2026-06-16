@@ -17,13 +17,14 @@ import { SYSTEM_PREFIXES, slugReserved } from '@/lib/tenant'
 import { middleware } from '@/middleware'
 
 describe('SYSTEM_PREFIXES + slugReserved', () => {
-  test('all 15 prefixes are present', () => {
-    expect(SYSTEM_PREFIXES.size).toBe(15)
+  test('all 16 prefixes are present', () => {
+    expect(SYSTEM_PREFIXES.size).toBe(16)
     expect(SYSTEM_PREFIXES.has('api')).toBe(true)
     expect(SYSTEM_PREFIXES.has('login')).toBe(true)
     expect(SYSTEM_PREFIXES.has('signup')).toBe(true)
     expect(SYSTEM_PREFIXES.has('dashboard')).toBe(true)
     expect(SYSTEM_PREFIXES.has('admin')).toBe(true)
+    expect(SYSTEM_PREFIXES.has('docs')).toBe(true)
   })
 
   test('slugReserved is case-insensitive and rejects API/login', () => {
