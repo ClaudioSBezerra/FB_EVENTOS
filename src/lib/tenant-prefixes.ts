@@ -21,6 +21,7 @@ export const SYSTEM_PREFIXES = new Set([
   '2fa',
   'admin',
   'docs',
+  'onboarding',
   'favicon.ico',
   'robots.txt',
   'sitemap.xml',

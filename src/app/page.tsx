@@ -22,17 +22,23 @@ export default async function Home() {
   const h = await nextHeaders()
   const session = await auth.api.getSession({ headers: h })
 
-  if (session?.session.activeOrganizationId) {
+  if (session) {
     const orgId = session.session.activeOrganizationId
-    const slug = await withTenant(orgId, async (scopedDb) => {
-      const rows = await scopedDb
-        .select({ slug: organization.slug })
-        .from(organization)
-        .where(eq(organization.id, orgId))
-        .limit(1)
-      return rows[0]?.slug ?? null
-    })
-    if (slug) redirect(`/${slug}/dashboard`)
+    if (orgId) {
+      const slug = await withTenant(orgId, async (scopedDb) => {
+        const rows = await scopedDb
+          .select({ slug: organization.slug })
+          .from(organization)
+          .where(eq(organization.id, orgId))
+          .limit(1)
+        return rows[0]?.slug ?? null
+      })
+      if (slug) redirect(`/${slug}/dashboard`)
+    }
+    // Logged in but no active org → finish setup at /onboarding. This covers
+    // both the legacy users created before the org-on-signup flow shipped
+    // AND the post-verify-email landing during the new signup flow.
+    redirect('/onboarding')
   }
 
   return (
