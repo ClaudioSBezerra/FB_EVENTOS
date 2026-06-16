@@ -1,23 +1,23 @@
 # FB_EVENTOS — Coolify production stack (Phase 1 demo, Plan 07).
 #
 # Single-stack deploy: Coolify clones this repo and runs
-# `docker compose up -d` to bring web + worker + postgres + minio + mailpit
+# `docker compose up -d` to bring web + worker + postgres + minio
 # online together. Mirrors the FB_APU04 docker-compose.prod.yml pattern.
 #
-# All ${VAR} placeholders are injected by Coolify from its env UI at deploy
-# time — see docs/deploy/DEPLOY-v0.1.0-DEMO.md for the canonical env list
-# and the operator-substitution table.
+# All ${VAR:-default} placeholders fall back to demo-safe defaults when
+# Coolify env UI doesn't override them. The defaults match what the
+# operator agreed on for the eventos.fbtax.cloud demo (passwords match
+# the FB_APU04/FB_FAROL/FB_SMARTPICK convention of `postgres`). Production
+# pilot deploy MUST override every password via Coolify env UI.
 #
 # DESIGN NOTES:
 #   - Postgres + MinIO live in this compose (not as separate Coolify Resources)
-#     so the demo deploy is a single button-click. For a real piloto you
-#     should promote them to dedicated Coolify-managed databases for snapshot
-#     tooling + zero-downtime failover.
-#   - APP_VERSION is passed as a build-arg so the runtime can echo it at
-#     /api/health (Plan 07). Git tag drives the version via Coolify CI hooks.
+#     so the demo deploy is a single button-click. For a real piloto promote
+#     them to dedicated Coolify-managed databases for snapshot tooling +
+#     zero-downtime failover.
 #   - Image tags are pinned (no `:latest`) — contractual ban from CLAUDE.md.
-#   - The `web` service runs migrations as part of its entrypoint via the
-#     Coolify Pre-Deploy hook (see docs/coolify/web.service.md).
+#   - Web + worker share a single Dockerfile with multi-stage targets
+#     (web-runner / worker-runner) to halve build memory vs separate files.
 #   - Traefik labels live in the Coolify service UI (NOT in this file) so
 #     the operator can swap host names without touching Git.
 
@@ -37,32 +37,32 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Database (NOBYPASSRLS runtime role)
-      DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD}@postgres:5432/fb_eventos_dev
-      # Migrator DSN (DDL-capable role — webhook tenant lookup + pre-deploy migrations)
-      DATABASE_MIGRATOR_URL: postgresql://fb_migrator:${FB_MIGRATOR_PASSWORD}@postgres:5432/fb_eventos_dev
+      # Database (NOBYPASSRLS runtime role). Password defaults match the
+      # init script — Coolify UI should override only if it differs.
+      DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD:-postgres}@postgres:5432/fb_eventos_dev
+      DATABASE_MIGRATOR_URL: postgresql://fb_migrator:${FB_MIGRATOR_PASSWORD:-postgres}@postgres:5432/fb_eventos_dev
 
-      # Auth — Better Auth
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      # Auth — Better Auth. Default secret is a fixed dev placeholder;
+      # for any production-adjacent deploy generate `openssl rand -hex 32`.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-fb-eventos-demo-secret-replace-in-prod-please-32+chars}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://eventos.fbtax.cloud}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://eventos.fbtax.cloud}
 
-      # SMTP (Hostinger)
+      # SMTP (Hostinger). Defaults to host but no creds — set in Coolify UI.
       SMTP_HOST: ${SMTP_HOST:-smtp.hostinger.com}
       SMTP_PORT: ${SMTP_PORT:-465}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
       SMTP_SECURE: ${SMTP_SECURE:-true}
       SMTP_FROM: ${SMTP_FROM:-FB_EVENTOS <no-reply@eventos.fbtax.cloud>}
 
       # MinIO — internal endpoint (web → minio inside this network)
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_USE_SSL: "false"
       MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET:-fb-eventos}
-      # Public endpoint embedded in pre-signed URLs delivered to the browser
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-https://minio.eventos.fbtax.cloud}
 
       # Pagar.me (sandbox for demo)
@@ -114,22 +114,21 @@ services:
     container_name: fb-eventos-worker
     restart: always
     environment:
-      # Same env as web — the worker shares the env loader (src/lib/env.ts)
-      DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD}@postgres:5432/fb_eventos_dev
-      DATABASE_MIGRATOR_URL: postgresql://fb_migrator:${FB_MIGRATOR_PASSWORD}@postgres:5432/fb_eventos_dev
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      DATABASE_URL: postgresql://fb_app_user:${FB_APP_PASSWORD:-postgres}@postgres:5432/fb_eventos_dev
+      DATABASE_MIGRATOR_URL: postgresql://fb_migrator:${FB_MIGRATOR_PASSWORD:-postgres}@postgres:5432/fb_eventos_dev
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-fb-eventos-demo-secret-replace-in-prod-please-32+chars}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://eventos.fbtax.cloud}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://eventos.fbtax.cloud}
       SMTP_HOST: ${SMTP_HOST:-smtp.hostinger.com}
       SMTP_PORT: ${SMTP_PORT:-465}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
       SMTP_SECURE: ${SMTP_SECURE:-true}
       SMTP_FROM: ${SMTP_FROM:-FB_EVENTOS <no-reply@eventos.fbtax.cloud>}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_USE_SSL: "false"
       MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET:-fb-eventos}
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-https://minio.eventos.fbtax.cloud}
@@ -147,7 +146,6 @@ services:
 
   # ---------------------------------------------------------------------------
   # PostgreSQL 16 — single source of truth (contractual ban on embedded DBs).
-  # See CLAUDE.md "Embedded-DB Anti-Pattern" + Plan 03 RLS contract.
   # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
@@ -155,13 +153,14 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      # Default superuser password for demo. Override in Coolify UI via
+      # POSTGRES_SUPERUSER_PASSWORD for any production-adjacent deploy.
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
       POSTGRES_DB: postgres
-      # Forwarded into the init scripts (scripts/db/init/01-roles.sql) so
-      # the role passwords come from Coolify env UI rather than committed
-      # placeholders.
-      FB_APP_PASSWORD: ${FB_APP_PASSWORD}
-      FB_MIGRATOR_PASSWORD: ${FB_MIGRATOR_PASSWORD}
+      # Forwarded into the init scripts (scripts/db/init/01-roles.sh) so
+      # the role passwords come from Coolify env UI when set.
+      FB_APP_PASSWORD: ${FB_APP_PASSWORD:-postgres}
+      FB_MIGRATOR_PASSWORD: ${FB_MIGRATOR_PASSWORD:-postgres}
     command:
       - postgres
       - -c
@@ -174,7 +173,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       # Auto-bootstrap roles, login users, extensions on first volume init.
       # docker-entrypoint-initdb.d is a Postgres image convention — every
-      # .sql / .sh file runs in alphabetical order as the superuser.
+      # .sh / .sql file runs in alphabetical order as the superuser.
       - ./scripts/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
@@ -191,8 +190,8 @@ services:
     restart: always
     command: server /data --console-address ':9001'
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BROWSER_REDIRECT_URL: ${MINIO_PUBLIC_ENDPOINT:-https://minio.eventos.fbtax.cloud}
     ports:
       - "9000:9000"
