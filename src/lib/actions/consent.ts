@@ -35,12 +35,22 @@ import { withTenant } from '@/db/with-tenant'
 const inputSchema = z.object({
   consentVersion: z.string().min(1),
   consentText: z.string().optional(),
+  // `userId` is accepted as a fallback for the signup flow: Better Auth has
+  // `autoSignIn: false` + `requireEmailVerification: true`, so the user
+  // session is NOT established at signup time → `auth.api.getSession()`
+  // returns null and the action would short-circuit on `no_session`. The
+  // caller (signup-form) supplies the freshly-created user.id explicitly so
+  // we can persist the consent_records row without waiting for verify+login.
+  userId: z.uuid().optional(),
 })
 
 export type RecordConsentInput = z.infer<typeof inputSchema>
 export type RecordConsentResult =
   | { ok: true }
-  | { ok: false; error: 'invalid_input' | 'no_session' | 'no_tenant' | 'insert_failed' }
+  | {
+      ok: false
+      error: 'invalid_input' | 'no_session' | 'no_user' | 'no_tenant' | 'insert_failed'
+    }
 
 function extractClientIp(headerMap: Headers): string {
   // x-forwarded-for can be "client, proxy1, proxy2" — the leftmost is the
@@ -66,12 +76,17 @@ export async function recordConsentMetadata(raw: unknown): Promise<RecordConsent
   const userAgent = h.get('user-agent') ?? null
 
   const session = await auth.api.getSession({ headers: h })
-  if (!session) {
-    return { ok: false, error: 'no_session' }
+
+  // userId resolution: prefer the live session (logged-in flow). If absent
+  // (signup flow with autoSignIn:false), accept the explicit userId passed
+  // by the caller — it carries the just-created user.id from signUp.email's
+  // return value.
+  const userId = session?.user.id ?? parsed.data.userId ?? null
+  if (!userId) {
+    return { ok: false, error: 'no_user' }
   }
 
-  const userId = session.user.id
-  const orgId = session.session.activeOrganizationId ?? null
+  const orgId = session?.session.activeOrganizationId ?? null
 
   // Resolve tenantId. Phase 0 invariant: organization.tenant_id === organization.id.
   // If activeOrganizationId is set, use it as tenantId. Otherwise, look up the

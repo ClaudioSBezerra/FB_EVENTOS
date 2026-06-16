@@ -20,7 +20,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-import { signUp } from '@/auth/client'
+import { authClient, signUp } from '@/auth/client'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -86,7 +86,7 @@ export function SignupForm() {
     //    The auth client (inferAdditionalFields) types consentAt as Date
     //    because of the type:'date' additionalFields config — Better Auth
     //    handles the JSON-over-the-wire serialization.
-    const { error } = await signUp.email({
+    const { data, error } = await signUp.email({
       email: values.email,
       password: values.password,
       name: values.name,
@@ -104,13 +104,30 @@ export function SignupForm() {
       return
     }
 
-    // 2. Audit-grade consent capture (IP from server headers).
+    const newUserId = data?.user?.id
+
+    // 2. Audit-grade consent capture (IP from server headers). Pass the
+    //    freshly-created user.id because autoSignIn:false means there is no
+    //    live session yet — without this the action would short-circuit on
+    //    no_session and consent_records would never be written.
     await recordConsentMetadata({
       consentVersion: LGPD_CONSENT_VERSION,
       consentText: LGPD_CONSENT_TEXT_V1,
+      userId: newUserId,
     })
 
-    // 3. Redirect to verify-email landing (Better Auth sent the link on signup).
+    // 3. Workaround for Better Auth `sendOnSignUp:true` regression observed
+    //    in production (2026-06-16): the auto-dispatch of the verification
+    //    email did not fire even though signUp.email returned success. Call
+    //    sendVerificationEmail explicitly here so the user always receives
+    //    the link. Worst-case (auto-dispatch DID fire) the user gets two
+    //    copies of the same email — preferable to none.
+    await authClient.sendVerificationEmail({
+      email: values.email,
+      callbackURL: '/login',
+    })
+
+    // 4. Redirect to verify-email landing.
     router.replace('/verify-email')
   }
 
