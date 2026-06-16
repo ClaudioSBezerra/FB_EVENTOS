@@ -170,7 +170,7 @@ services:
       - -c
       - shared_buffers=256MB
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_v2:/var/lib/postgresql/data
       # Auto-bootstrap roles, login users, extensions on first volume init.
       # docker-entrypoint-initdb.d is a Postgres image convention — every
       # .sh / .sql file runs in alphabetical order as the superuser.
@@ -202,7 +202,7 @@ services:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - minio_data:/data
+      - minio_data_v2:/data
     healthcheck:
       # Official MinIO docs healthcheck — /minio/health/live returns 200 once
       # the S3 API is accepting requests. start_period gives MinIO time to
@@ -215,5 +215,5 @@ services:
       start_period: 30s
 
 volumes:
-  postgres_data:
-  minio_data:
+  postgres_data_v2:
+  minio_data_v2:
