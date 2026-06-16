@@ -242,6 +242,29 @@ services:
       - "9001:9001"
     volumes:
       - minio_data_v2:/data
+    # ---------------------------------------------------------------------------
+    # Traefik labels (2026-06-16): Coolify's SERVICE_FQDN_<SERVICE> auto-magic
+    # generated labels for `web` but NOT for `minio` in this stack — the
+    # subdomain `minio.eventos.fbtax.cloud` ended up served by Traefik's default
+    # self-signed cert (404/handshake unknown CA) because no router was bound
+    # to that Host. Coolify-version-specific gap on beta.463.
+    #
+    # Explicit labels override the missing auto-magic: HTTP entrypoint redirects
+    # to HTTPS, HTTPS entrypoint serves MinIO S3 API on port 9000 via Let's
+    # Encrypt cert. The `redirect-to-https` middleware was declared globally by
+    # the `web` service — we reuse it instead of redeclaring. Console (port
+    # 9001) intentionally NOT exposed via Traefik; reach via host IP only when
+    # operationally needed.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio-http.entryPoints=http"
+      - "traefik.http.routers.minio-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.minio-http.rule=Host(`minio.eventos.fbtax.cloud`)"
+      - "traefik.http.routers.minio-https.entryPoints=https"
+      - "traefik.http.routers.minio-https.rule=Host(`minio.eventos.fbtax.cloud`)"
+      - "traefik.http.routers.minio-https.tls=true"
+      - "traefik.http.routers.minio-https.tls.certresolver=letsencrypt"
+      - "traefik.http.services.minio.loadbalancer.server.port=9000"
     healthcheck:
       # Official MinIO docs healthcheck — /minio/health/live returns 200 once
       # the S3 API is accepting requests. start_period gives MinIO time to
