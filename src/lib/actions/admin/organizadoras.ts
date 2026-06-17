@@ -51,6 +51,20 @@ export async function createOrganizadora(raw: unknown): Promise<CreateOrganizado
   const { orgName, orgSlug, adminName, adminEmail, adminPassword } = parsed.data
   const newTenantId = crypto.randomUUID()
 
+  // Pre-check email duplication. Better Auth's anti-enumeration returns a
+  // synthetic user with a fresh id when the email already exists — see
+  // detailed note in src/lib/actions/admin/usuarios.ts:createUser. Without
+  // the pre-check the wizard would say "created" but the org/member rows
+  // get linked to a non-existent user id.
+  const existing = await db
+    .select({ id: userTable.id })
+    .from(userTable)
+    .where(eq(userTable.email, adminEmail))
+    .limit(1)
+  if (existing.length > 0) {
+    return { ok: false, error: 'email_taken' }
+  }
+
   // 1. Create the user via Better Auth so password hashing + email
   // uniqueness checks are handled by the auth subsystem. We mark
   // emailVerified=true server-side after success because this is an
@@ -75,6 +89,17 @@ export async function createOrganizadora(raw: unknown): Promise<CreateOrganizado
       return { ok: false, error: 'email_taken' }
     }
     return { ok: false, error: 'create_failed' }
+  }
+
+  // Defensive post-check (TOCTOU): confirm the returned id is in the DB.
+  const created = await db
+    .select({ id: userTable.id })
+    .from(userTable)
+    .where(eq(userTable.id, newUserId))
+    .limit(1)
+  if (created.length === 0) {
+    logger.error({ newUserId, adminEmail }, 'admin_create_org_synthetic_id_returned')
+    return { ok: false, error: 'email_taken' }
   }
 
   // 2. Mark the admin-created user verified (skip email loop).

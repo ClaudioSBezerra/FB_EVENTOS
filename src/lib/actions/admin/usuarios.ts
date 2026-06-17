@@ -41,6 +41,27 @@ export async function createUser(raw: unknown): Promise<CreateUserResult> {
   const parsed = createSchema.safeParse(raw)
   if (!parsed.success) return { ok: false, error: 'invalid_input' }
 
+  // Pre-check email duplication BEFORE calling Better Auth.
+  //
+  // Better Auth has anti-enumeration: when emailAndPassword.requireEmailVerification
+  // OR emailAndPassword.autoSignIn === false (we have both), the sign-up
+  // endpoint silently returns a SYNTHETIC user with a freshly generated id
+  // instead of throwing on duplicate email. That id is NOT persisted —
+  // anything we do with it (UPDATE, redirect to detail page) hits 0 rows
+  // and looks like the user vanished. The admin console reported the user
+  // as created and then 404'd on detail (2026-06-17 incident:
+  // claudio_bezerra@hotmail.com duplicate). Pre-checking here keeps the
+  // anti-enumeration guarantee for the public surface while giving admins
+  // a clean error message.
+  const existing = await db
+    .select({ id: userTable.id })
+    .from(userTable)
+    .where(eq(userTable.email, parsed.data.email))
+    .limit(1)
+  if (existing.length > 0) {
+    return { ok: false, error: 'email_taken' }
+  }
+
   let newUserId: string
   try {
     const result = await auth.api.signUpEmail({
@@ -60,6 +81,19 @@ export async function createUser(raw: unknown): Promise<CreateUserResult> {
       return { ok: false, error: 'email_taken' }
     }
     return { ok: false, error: 'create_failed' }
+  }
+
+  // Defensive post-check: confirm the returned id is actually in the DB.
+  // Belt-and-suspenders against future Better Auth changes that might
+  // synthesize ids without the pre-check catching them (TOCTOU race).
+  const created = await db
+    .select({ id: userTable.id })
+    .from(userTable)
+    .where(eq(userTable.id, newUserId))
+    .limit(1)
+  if (created.length === 0) {
+    logger.error({ newUserId, email: parsed.data.email }, 'admin_create_user_synthetic_id_returned')
+    return { ok: false, error: 'email_taken' }
   }
 
   try {
