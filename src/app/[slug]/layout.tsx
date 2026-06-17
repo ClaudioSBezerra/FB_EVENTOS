@@ -6,12 +6,11 @@
 // activeOrganizationId === tenant.id check stays in each page so 403
 // pages can render their own framing without being wrapped by the sidebar.
 //
-// Why session check here:
-//   Without it, an unauthenticated visitor to /paroquia/eventos lands on
-//   the page-level redirect to /login — fine, but the page server-renders
-//   the layout first (which would call resolveTenantBySlug without
-//   knowing whether to bail). Bailing at the layout saves the trip and
-//   makes the redirect chain deterministic.
+// Public route exceptions:
+//   Rotas listadas em PUBLIC_TENANT_PATHS bypassam o session check porque o
+//   visitante ainda não tem conta (ex: /paroquia/fornecedor/cadastro — vendor
+//   signup self-service via convite). O pathname chega via x-pathname header
+//   injetado pelo middleware.
 
 import { headers as nextHeaders } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
@@ -27,9 +26,29 @@ interface LayoutProps {
   params: Promise<{ slug: string }>
 }
 
+/**
+ * Sub-paths (após /{slug}/) que são acessíveis sem session.
+ * Exact suffix match contra o pathname.
+ */
+const PUBLIC_TENANT_SUBPATHS = ['/fornecedor/cadastro']
+
+function isPublicTenantPath(slug: string, pathname: string | null | undefined): boolean {
+  if (!pathname) return false
+  return PUBLIC_TENANT_SUBPATHS.some((sub) => pathname === `/${slug}${sub}`)
+}
+
 export default async function TenantLayout({ children, params }: LayoutProps) {
   const { slug } = await params
   const h = await nextHeaders()
+  const pathname = h.get('x-pathname')
+  const isPublic = isPublicTenantPath(slug, pathname)
+
+  // Public sub-paths render the children sem sidebar e sem session check.
+  // O próprio page é responsável por resolveTenantBySlug + notFound se
+  // tenant não existir.
+  if (isPublic) {
+    return <>{children}</>
+  }
 
   const session = await auth.api.getSession({ headers: h })
   if (!session) {

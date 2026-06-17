@@ -81,6 +81,10 @@ export function middleware(req: NextRequest): NextResponse {
   //    object AND echoed back on the response for client/log correlation.
   const requestHeaders = new Headers(req.headers)
   requestHeaders.set('x-request-id', requestId)
+  // Pathname downstream — usado pelo [slug]/layout.tsx pra decidir se faz
+  // session check (rotas públicas do vendor como /fornecedor/cadastro são
+  // accessible sem login).
+  requestHeaders.set('x-pathname', pathname)
   if (tenantSlug) {
     requestHeaders.set('x-tenant-slug', tenantSlug)
   } else {
