@@ -11,6 +11,7 @@ import { notFound, redirect } from 'next/navigation'
 
 import { auth } from '@/auth/server'
 import { PlantaUploader } from '@/components/eventos/planta-uploader'
+import { PublishEventButton } from '@/components/eventos/publish-event-button'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { withTenant } from '@/db/with-tenant'
@@ -84,6 +85,8 @@ export default async function EventoDetailPage({ params }: PageProps) {
           <Link href={`/${slug}/eventos`}>← Voltar</Link>
         </Button>
       </header>
+
+      <PublishEventButton eventId={ev.id} status={ev.status} />
 
       <Card>
         <CardHeader>

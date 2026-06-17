@@ -151,6 +151,35 @@ export async function createEventInTenant(
  * The caller MUST check the return value: a cross-tenant attempt is silent
  * (0 rows updated, no error) by design of FORCE RLS.
  */
+/**
+ * FSM transition: draft → published. Makes the event visible on the
+ * marketplace (listOpenEventsInTenant filters by status='published').
+ *
+ * Idempotent: if the event is already published, returns the row without
+ * any change. Returns null if the event row is missing or RLS-scoped out.
+ */
+export async function publishEventInTenant(
+  db: TenantDb,
+  input: { eventId: string },
+  userId: string,
+): Promise<PersistedEventRow | null> {
+  const rows = await db
+    .update(events)
+    .set({ status: 'published', updatedAt: new Date() })
+    .where(and(eq(events.id, input.eventId), isNull(events.deletedAt)))
+    .returning()
+  const row = rows[0]
+  if (!row) return null
+  await recordAudit(db, {
+    action: 'event.published',
+    entity: 'event',
+    entityId: row.id,
+    userId,
+    payload: {},
+  })
+  return toPersistedEvent(row)
+}
+
 export async function updateEventInTenant(
   db: TenantDb,
   input: EventUpdateInput,
@@ -280,6 +309,19 @@ export const updateEvent = withTenantAction
     }
     revalidatePath('/[slug]/eventos', 'page')
     revalidatePath(`/[slug]/eventos/${row.id}`, 'page')
+    return row
+  })
+
+export const publishEvent = withTenantAction
+  .inputSchema(z.object({ eventId: z.string().uuid() }))
+  .action(async ({ ctx, parsedInput }) => {
+    const row = await publishEventInTenant(ctx.db, parsedInput, ctx.userId)
+    if (!row) {
+      throw new Error('Evento não encontrado ou inacessível')
+    }
+    revalidatePath('/[slug]/eventos', 'page')
+    revalidatePath(`/[slug]/eventos/${row.id}`, 'page')
+    revalidatePath('/[slug]/marketplace', 'page')
     return row
   })
 
