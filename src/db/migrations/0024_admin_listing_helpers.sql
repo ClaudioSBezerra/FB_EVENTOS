@@ -1,27 +1,37 @@
 -- 0024_admin_listing_helpers.sql
 --
 -- SECURITY DEFINER helpers used by the /admin console for cross-tenant
--- reads (list all orgs, list all users with their memberships). Same
--- pattern as 0011 fb_lookup_tenant_for_org and 0023
--- fb_list_user_memberships — the function body runs with row_security
--- off so the admin can see every tenant without setting GUC per call.
+-- reads (list all orgs, list all users with their memberships).
 --
--- AUTHZ:
---   These functions DO NOT check is_super_admin. The TS callers
---   (src/lib/admin/*) MUST gate via requireSuperAdmin() before invoking.
---   This split is intentional: SQL functions handle data, app code
---   handles policy — same as the rest of the codebase.
+-- Same load-bearing choices as 0023:
+--   - LANGUAGE plpgsql (NOT sql) so the body is lazy-parsed and the
+--     RLS evaluation during CREATE doesn't fire as the migrator role.
+--   - OWNED by fb_eventos_sysreader (BYPASSRLS) so FORCE RLS on
+--     member/events/organization is bypassed inside the function body.
+--   - GRANT EXECUTE only — TS callers gate via requireSuperAdmin().
+
+-- Sanity: sysreader must already exist (setup-roles.sh).
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fb_eventos_sysreader') THEN
+    RAISE EXCEPTION 'fb_eventos_sysreader role missing — run scripts/db/setup-roles.sh first';
+  END IF;
+END $$;
+
+--> statement-breakpoint
+
+-- Catalog grants. organization + member from earlier migrations; user +
+-- events new here.
+GRANT SELECT ON "user" TO fb_eventos_sysreader;
+
+--> statement-breakpoint
+
+GRANT SELECT ON "events" TO fb_eventos_sysreader;
+
+--> statement-breakpoint
 
 -- ────────────────────────────────────────────────────────────────────
 -- fb_admin_list_organizations
 -- ────────────────────────────────────────────────────────────────────
---
--- Returns every organization with quick stats so the /admin dashboard
--- can render a paginated list without N+1 selects per row.
---
--- count_members = active member rows (no soft-delete on member yet, so
---                 raw COUNT is accurate)
--- count_events  = events without deleted_at
 
 CREATE OR REPLACE FUNCTION public.fb_admin_list_organizations()
 RETURNS TABLE (
@@ -33,22 +43,33 @@ RETURNS TABLE (
   count_members   bigint,
   count_events    bigint
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
-SET row_security = off
+SET search_path = public, pg_temp
 AS $$
-  SELECT
-    o.id,
-    o.tenant_id,
-    o.slug,
-    o.name,
-    o.created_at,
-    (SELECT count(*) FROM "member" m WHERE m.organization_id = o.id)             AS count_members,
-    (SELECT count(*) FROM events e   WHERE e.tenant_id = o.tenant_id
-                                       AND e.deleted_at IS NULL)                 AS count_events
-    FROM "organization" o
-   ORDER BY o.created_at DESC;
+BEGIN
+  RETURN QUERY
+    SELECT
+      o.id,
+      o.tenant_id,
+      o.slug,
+      o.name,
+      o.created_at,
+      (SELECT count(*) FROM "member" m WHERE m.organization_id = o.id)             AS count_members,
+      (SELECT count(*) FROM events e   WHERE e.tenant_id = o.tenant_id
+                                         AND e.deleted_at IS NULL)                 AS count_events
+      FROM "organization" o
+     ORDER BY o.created_at DESC;
+END;
 $$;
+
+--> statement-breakpoint
+
+ALTER FUNCTION public.fb_admin_list_organizations() OWNER TO fb_eventos_sysreader;
+
+--> statement-breakpoint
+
+REVOKE ALL ON FUNCTION public.fb_admin_list_organizations() FROM PUBLIC;
 
 --> statement-breakpoint
 
@@ -57,15 +78,13 @@ GRANT EXECUTE ON FUNCTION public.fb_admin_list_organizations() TO fb_eventos_app
 --> statement-breakpoint
 
 COMMENT ON FUNCTION public.fb_admin_list_organizations() IS
-  'Admin-only cross-tenant org listing with counts. Caller MUST verify is_super_admin in app code (e.g. requireSuperAdmin TS helper) — function itself has no role gate.';
+  'Admin-only cross-tenant org listing with counts. OWNED by fb_eventos_sysreader (BYPASSRLS). Caller MUST verify is_super_admin in app code.';
+
+--> statement-breakpoint
 
 -- ────────────────────────────────────────────────────────────────────
 -- fb_admin_list_users
 -- ────────────────────────────────────────────────────────────────────
---
--- Returns every user with their membership count + super_admin flag, so
--- the /admin/usuarios page can show a useful summary. Filters
--- deleted_at IS NULL by default (LGPD soft-delete).
 
 CREATE OR REPLACE FUNCTION public.fb_admin_list_users()
 RETURNS TABLE (
@@ -77,22 +96,33 @@ RETURNS TABLE (
   created_at        timestamptz,
   count_memberships bigint
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
-SET row_security = off
+SET search_path = public, pg_temp
 AS $$
-  SELECT
-    u.id,
-    u.email,
-    u.name,
-    u.email_verified,
-    u.is_super_admin,
-    u.created_at,
-    (SELECT count(*) FROM "member" m WHERE m.user_id = u.id) AS count_memberships
-    FROM "user" u
-   WHERE u.deleted_at IS NULL
-   ORDER BY u.created_at DESC;
+BEGIN
+  RETURN QUERY
+    SELECT
+      u.id,
+      u.email,
+      u.name,
+      u.email_verified,
+      u.is_super_admin,
+      u.created_at,
+      (SELECT count(*) FROM "member" m WHERE m.user_id = u.id) AS count_memberships
+      FROM "user" u
+     WHERE u.deleted_at IS NULL
+     ORDER BY u.created_at DESC;
+END;
 $$;
+
+--> statement-breakpoint
+
+ALTER FUNCTION public.fb_admin_list_users() OWNER TO fb_eventos_sysreader;
+
+--> statement-breakpoint
+
+REVOKE ALL ON FUNCTION public.fb_admin_list_users() FROM PUBLIC;
 
 --> statement-breakpoint
 
@@ -101,4 +131,4 @@ GRANT EXECUTE ON FUNCTION public.fb_admin_list_users() TO fb_eventos_app;
 --> statement-breakpoint
 
 COMMENT ON FUNCTION public.fb_admin_list_users() IS
-  'Admin-only user listing with stats. Caller MUST verify is_super_admin in app code — function itself has no role gate.';
+  'Admin-only user listing with stats. OWNED by fb_eventos_sysreader (BYPASSRLS). Caller MUST verify is_super_admin in app code.';
