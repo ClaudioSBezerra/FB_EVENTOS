@@ -6,12 +6,14 @@ import { notFound, redirect } from 'next/navigation'
 
 import { auth } from '@/auth/server'
 import { ContractDetail } from '@/components/contracts/contract-detail'
+import { ContractSimulatorPanel } from '@/components/contracts/contract-simulator-panel'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { withTenant } from '@/db/with-tenant'
 import { getContractByIdInTenant } from '@/lib/actions/contracts'
 import { mintPresignedGet } from '@/lib/storage/minio'
 import { resolveTenantBySlug } from '@/lib/tenant'
+import { isSimulatedZapsignToken } from '@/lib/zapsign/simulator'
 
 interface PageProps {
   params: Promise<{ slug: string; contractId: string }>
@@ -85,6 +87,16 @@ export default async function ContractDetailPage({ params }: PageProps) {
           />
         </CardContent>
       </Card>
+
+      {/* ZapSign simulator (piloto pré-credencial) — só aparece quando o
+          contrato foi enviado pelo simulador (zapsignDocId começa com SIM_)
+          E ainda não foi assinado. */}
+      {contract.status !== 'signed' &&
+        contract.status !== 'cancelled' &&
+        contract.status !== 'expired' &&
+        isSimulatedZapsignToken(contract.zapsignDocId) && (
+          <ContractSimulatorPanel contractId={contract.id} tenantId={contract.tenantId} />
+        )}
     </main>
   )
 }

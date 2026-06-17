@@ -147,6 +147,17 @@ const envSchema = z.object({
     .optional()
     .transform((v) => v === 'true' || v === '1'),
 
+  // ─────────────────────────────────────────────────────────────────────
+  // ZapSign simulator (mesmo padrão do payment simulator).
+  // Ative quando ZAPSIGN_TOKEN ainda não estiver configurado. zapsign.send-contract
+  // task gera um token SIM_<uuid> em vez de chamar a API. Página do contrato
+  // mostra "Simular Assinatura" → flipa contract.status='signed' + enqueue
+  // email 'contrato_assinado'.
+  ZAPSIGN_SIMULATOR_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
+
   // App
   NEXT_PUBLIC_APP_URL: z.url('NEXT_PUBLIC_APP_URL must be a valid URL'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

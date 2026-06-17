@@ -38,6 +38,7 @@ import { recordAudit } from '@/lib/audit'
 import { childLogger } from '@/lib/logger'
 import { mintPresignedGet } from '@/lib/storage/minio'
 import { createDocument } from '@/lib/zapsign/client'
+import { createSimulatedDocument, shouldUseZapsignSimulator } from '@/lib/zapsign/simulator'
 import type { ZapsignCreateDocRequest } from '@/lib/zapsign/types'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -144,8 +145,12 @@ export const zapsignSendContract: Task = async (rawPayload, helpers) => {
       external_id: row.contract.id,
     }
 
-    // 5. POST to ZapSign.
-    const response = await createDocument(zapsignPayload)
+    // 5. POST to ZapSign — OR call the simulator when ZAPSIGN_SIMULATOR_ENABLED
+    //    is set (piloto pré-credencial). The simulator returns the same
+    //    response shape so steps 6-9 stay agnostic.
+    const response = shouldUseZapsignSimulator()
+      ? createSimulatedDocument(zapsignPayload)
+      : await createDocument(zapsignPayload)
 
     // 6. INSERT zapsign_documents row.
     await db.insert(zapsignDocuments).values({
