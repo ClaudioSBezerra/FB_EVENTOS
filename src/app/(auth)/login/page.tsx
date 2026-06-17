@@ -16,23 +16,16 @@ export const metadata = {
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen">
-      {/* Painel esquerdo — marca + cofundadora (escondido em mobile) */}
+      {/* Painel esquerdo — tagline + logo cofundadora (escondido em mobile) */}
       <aside className="relative hidden w-1/2 flex-col justify-between bg-slate-900 p-12 text-slate-100 md:flex">
-        {/* Topo: brand FB_EVENTOS */}
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            FB<span className="text-emerald-400">_</span>EVENTOS
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">Plataforma de gestão de grandes eventos.</p>
-        </div>
+        {/* Topo: tagline com a mesma tipografia do brand FB_EVENTOS */}
+        <h1 className="text-xl font-semibold tracking-tight">
+          Plataforma de gestão de grandes eventos.
+        </h1>
 
         {/* Centro: logo da cofundadora — a imagem já inclui as taglines
-            "Gerando Resultados / Conectando Oportunidades", então o texto
-            externo é só uma chip discreta acima. */}
+            "Gerando Resultados / Conectando Oportunidades". */}
         <div className="flex flex-col items-center">
-          <span className="mb-6 inline-flex rounded-full border border-slate-700 px-3 py-1 text-xs font-medium uppercase tracking-widest text-slate-400">
-            Cofundadora
-          </span>
           <div className="relative h-44 w-80">
             <Image
               src="/partners/gru-logo.png"
