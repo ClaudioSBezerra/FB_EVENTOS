@@ -276,6 +276,37 @@ services:
       retries: 5
       start_period: 30s
 
+  # ---------------------------------------------------------------------------
+  # MinIO bootstrap — one-shot service that creates the default bucket
+  # after MinIO is healthy.
+  #
+  # MinIO doesn't auto-create buckets from MINIO_DEFAULT_BUCKET (env var is
+  # just a convention we use to plumb the same value to the web service).
+  # Without this step, the first planta upload fails with "The specified
+  # bucket does not exist" — reported 2026-06-17 prod incident, manually
+  # fixed via `mc mb` then permanently fixed here.
+  #
+  # Uses the official MinIO Client (mc) image. `mc mb -p` is idempotent —
+  # safe to run on every deploy.
+  # ---------------------------------------------------------------------------
+  minio-bootstrap:
+    image: minio/mc:RELEASE.2025-01-17T23-25-50Z
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET:-fb-eventos}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" &&
+      mc mb -p local/\"$$MINIO_DEFAULT_BUCKET\" &&
+      echo 'minio-bootstrap: bucket ready' &&
+      mc ls local/
+      "
+
 volumes:
   postgres_data_v4:
   minio_data_v2:
