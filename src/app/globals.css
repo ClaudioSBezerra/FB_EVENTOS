@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
+/*
+ * FB_EVENTOS — Light theme locked.
+ *
+ * The shadcn primitives + tenant shell use FIXED Tailwind classes
+ * (bg-white, text-slate-900, text-slate-600 …) with no `dark:` variants.
+ * The original Next.js scaffold included a `prefers-color-scheme: dark`
+ * block that flipped `--background` to #0a0a0a / `--foreground` to #ededed
+ * whenever the user's OS was in dark mode — but since the fixed Tailwind
+ * classes never followed, the result was washed-out, near-illegible text
+ * on every page (reported by operator 2026-06-17 on the event form).
+ *
+ * Dark mode WILL come later via shadcn's full theme tokens. For now: pin
+ * light. `color-scheme: light` also tells the browser to render native
+ * controls (date pickers, scrollbars) in light mode regardless of OS.
+ */
 :root {
+  color-scheme: light;
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a; /* slate-900 — matches the fixed text-slate-900 use */
 }
 
 @theme inline {
@@ -10,13 +26,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
