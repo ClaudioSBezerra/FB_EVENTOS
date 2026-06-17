@@ -9,7 +9,9 @@ import { headers as nextHeaders } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { auth } from '@/auth/server'
+import { checkSuperAdmin } from '@/auth/super-admin'
 import { SelectOrgList } from '@/components/select-org/select-org-list'
+import { adminListOrganizations } from '@/lib/admin/queries'
 import { listUserMemberships } from '@/lib/auth/memberships'
 
 export const metadata = {
@@ -21,7 +23,21 @@ export default async function SelectOrgPage() {
   const session = await auth.api.getSession({ headers: h })
   if (!session) redirect('/login')
 
-  const memberships = await listUserMemberships(session.user.id)
+  // Super admin acts-as path: lists EVERY org and lets them pick — no
+  // member row required (selectActiveOrg has the matching bypass).
+  const { isSuperAdmin } = await checkSuperAdmin()
+
+  const memberships = isSuperAdmin
+    ? (await adminListOrganizations()).map((o) => ({
+        memberId: `admin-${o.id}`,
+        organizationId: o.id,
+        tenantId: o.tenantId,
+        slug: o.slug,
+        name: o.name,
+        role: 'super_admin',
+      }))
+    : await listUserMemberships(session.user.id)
+
   if (memberships.length === 0) redirect('/no-access')
   // Single membership: fast-forward straight to the dashboard.
   if (memberships.length === 1 && memberships[0]) {

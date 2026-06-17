@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { EditOrganizadoraForm } from '@/components/admin/edit-organizadora-form'
+import { EnterAsOrgButton } from '@/components/admin/enter-as-org-button'
 import { Button } from '@/components/ui/button'
 import { member, organization, user as userTable } from '@/db/schema/auth'
 import { withTenant } from '@/db/with-tenant'
@@ -75,6 +76,17 @@ export default async function AdminOrgDetailPage({ params }: PageProps) {
           <Link href="/admin/organizadoras">← Voltar</Link>
         </Button>
       </header>
+
+      <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-emerald-700">
+          Atuar como esta organizadora
+        </h2>
+        <p className="mb-4 text-sm text-emerald-900">
+          Acesse o painel desta org para criar eventos, gerenciar lotes, fornecedores e cobranças.
+          Você volta ao /admin pela sidebar a qualquer momento.
+        </p>
+        <EnterAsOrgButton organizationId={org.id} />
+      </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Dados</h2>

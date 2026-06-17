@@ -15,9 +15,7 @@ import { and, count, eq, isNull } from 'drizzle-orm'
 import {
   ArrowUpRight,
   CalendarDays,
-  CalendarPlus,
   CheckCircle2,
-  FileText,
   PackageCheck,
   Receipt,
   Store,
@@ -114,47 +112,46 @@ export default async function TenantDashboardPage({ params }: DashboardProps) {
         />
       </section>
 
-      {/* Quick actions */}
+      {/* Módulos do sistema — cards grandes estilo ERP. Cada módulo é uma
+          área completa do produto; o botão é a ação principal de entrada. */}
       <section>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Ações rápidas
+          Módulos
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <QuickAction
-            href={`/${slug}/eventos/novo`}
-            title="Criar evento"
-            description="Cadastre um novo evento, suba a planta e defina capacidades."
-            Icon={CalendarPlus}
-          />
-          <QuickAction
-            href={`/${slug}/eventos`}
-            title="Ver eventos"
-            description="Lista de eventos com plantas, lotes e dashboards."
+        <div className="grid gap-4 md:grid-cols-2">
+          <ModuleCard
+            title="Eventos"
+            description="Cadastre eventos, suba plantas, desenhe lotes e defina categorias de preço."
             Icon={CalendarDays}
+            primaryHref={`/${slug}/eventos/novo`}
+            primaryLabel="Novo evento"
+            secondaryHref={`/${slug}/eventos`}
+            secondaryLabel="Ver eventos"
           />
-          <QuickAction
-            href={`/${slug}/fornecedores`}
+          <ModuleCard
             title="Fornecedores"
-            description="Aprovar cadastros, ver documentos e histórico."
+            description="Cadastros, documentos, aprovação e histórico de vínculos."
             Icon={Users}
+            primaryHref={`/${slug}/fornecedores/novo`}
+            primaryLabel="Novo fornecedor"
+            secondaryHref={`/${slug}/fornecedores`}
+            secondaryLabel="Ver fornecedores"
           />
-          <QuickAction
-            href={`/${slug}/marketplace`}
+          <ModuleCard
             title="Marketplace"
-            description="Veja o que está publicado para fornecedores."
+            description="Veja o que está publicado para fornecedores e acompanhe reservas."
             Icon={Store}
+            primaryHref={`/${slug}/marketplace`}
+            primaryLabel="Abrir marketplace"
           />
-          <QuickAction
-            href={`/${slug}/cobrancas`}
-            title="Cobranças"
-            description="Pagamentos PIX/cartão, reembolsos e status."
+          <ModuleCard
+            title="Cobranças & Contratos"
+            description="PIX, cartão, reembolsos, contratos digitais e assinaturas."
             Icon={Receipt}
-          />
-          <QuickAction
-            href={`/${slug}/contratos`}
-            title="Contratos"
-            description="Contratos digitais e assinaturas via ZapSign."
-            Icon={FileText}
+            primaryHref={`/${slug}/cobrancas`}
+            primaryLabel="Ver cobranças"
+            secondaryHref={`/${slug}/contratos`}
+            secondaryLabel="Ver contratos"
           />
         </div>
       </section>
@@ -187,29 +184,47 @@ function KpiCard({ label, value, Icon, href }: KpiCardProps) {
   )
 }
 
-interface QuickActionProps {
-  href: string
+interface ModuleCardProps {
   title: string
   description: string
   Icon: typeof CalendarDays
+  primaryHref: string
+  primaryLabel: string
+  secondaryHref?: string
+  secondaryLabel?: string
 }
 
-function QuickAction({ href, title, description, Icon }: QuickActionProps) {
+function ModuleCard({
+  title,
+  description,
+  Icon,
+  primaryHref,
+  primaryLabel,
+  secondaryHref,
+  secondaryLabel,
+}: ModuleCardProps) {
   return (
-    <Card className="transition-shadow hover:shadow-md">
-      <CardHeader className="space-y-2">
-        <div className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-emerald-100 text-emerald-700">
-          <Icon className="h-4 w-4" aria-hidden="true" />
+    <Card className="flex flex-col transition-shadow hover:shadow-md">
+      <CardHeader className="space-y-3">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+          <Icon className="h-6 w-6" aria-hidden="true" />
         </div>
-        <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <div>
+          <CardTitle className="text-lg">{title}</CardTitle>
+          <CardDescription className="mt-1">{description}</CardDescription>
+        </div>
       </CardHeader>
-      <CardContent>
-        <Button asChild variant="outline" size="sm" className="w-full">
-          <Link href={href}>
-            Abrir <ArrowUpRight className="ml-1 h-3 w-3" />
+      <CardContent className="mt-auto flex flex-wrap gap-2">
+        <Button asChild size="default">
+          <Link href={primaryHref}>
+            {primaryLabel} <ArrowUpRight className="ml-1 h-4 w-4" />
           </Link>
         </Button>
+        {secondaryHref && secondaryLabel && (
+          <Button asChild size="default" variant="outline">
+            <Link href={secondaryHref}>{secondaryLabel}</Link>
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

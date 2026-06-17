@@ -17,7 +17,9 @@ import { headers as nextHeaders } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 
 import { auth } from '@/auth/server'
+import { checkSuperAdmin } from '@/auth/super-admin'
 import { TenantSidebar } from '@/components/tenant-shell/tenant-sidebar'
+import { setActiveOrganizationForSession } from '@/lib/auth/set-active-org'
 import { resolveTenantBySlug } from '@/lib/tenant'
 
 interface LayoutProps {
@@ -37,6 +39,22 @@ export default async function TenantLayout({ children, params }: LayoutProps) {
   const tenant = await resolveTenantBySlug(slug)
   if (!tenant) {
     notFound()
+  }
+
+  // Super-admin "acessar como organizadora" path — quando um super_admin
+  // navega direto pra /{slug}/* sem ter passado por /select-org, o
+  // session.active_organization_id está NULL (ou aponta pra outra org).
+  // As pages tenant-scoped têm check `activeOrgId !== tenant.id` que 403a.
+  // Aqui auto-flipamos a session pra essa org antes de renderizar, sem
+  // precisar refatorar 14 pages. Regular users mantêm o gate normal.
+  if (session.session.activeOrganizationId !== tenant.id) {
+    const { isSuperAdmin } = await checkSuperAdmin()
+    if (isSuperAdmin) {
+      await setActiveOrganizationForSession(session.session.id, tenant.id).catch(() => null)
+      // Hard redirect to re-trigger the server-side render with the new
+      // session so the pages downstream see activeOrgId === tenant.id.
+      redirect(`/${slug}/dashboard`)
+    }
   }
 
   const userLabel = session.user.name ?? session.user.email ?? 'usuário'

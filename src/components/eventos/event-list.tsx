@@ -5,6 +5,7 @@
 // stays pure presentation — no DB access here. That keeps the RLS contract
 // at the page level where the tenant context is established.
 
+import { CalendarPlus, MapPin, Sparkles, Users } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -32,14 +33,40 @@ const dateFmt = new Intl.DateTimeFormat('pt-BR', {
 export function EventList({ tenantSlug, events }: EventListProps) {
   if (events.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-slate-300 p-8 text-center">
-        <p className="text-slate-600">Nenhum evento cadastrado ainda.</p>
-        <Link
-          href={`/${tenantSlug}/eventos/novo`}
-          className="mt-3 inline-block text-sm text-blue-600 underline"
-        >
-          Criar o primeiro evento
-        </Link>
+      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-white p-10 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+          <Sparkles className="h-8 w-8" aria-hidden="true" />
+        </div>
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+          Comece criando seu primeiro evento
+        </h2>
+        <p className="mx-auto mt-3 max-w-md text-sm text-slate-600">
+          Cadastre o evento, suba a planta (PDF, JPG ou PNG), defina as categorias de lote e
+          publique no marketplace para os fornecedores.
+        </p>
+
+        <div className="mt-6 inline-flex">
+          <Button asChild size="lg">
+            <Link href={`/${tenantSlug}/eventos/novo`}>
+              <CalendarPlus className="mr-2 h-5 w-5" /> Criar evento
+            </Link>
+          </Button>
+        </div>
+
+        <ul className="mx-auto mt-10 grid max-w-2xl gap-3 text-left text-sm text-slate-600 sm:grid-cols-3">
+          <li className="flex items-start gap-2">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            Defina nome, datas, local e capacidade.
+          </li>
+          <li className="flex items-start gap-2">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            Suba a planta e desenhe lotes no editor.
+          </li>
+          <li className="flex items-start gap-2">
+            <Users className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            Publique e receba fornecedores no marketplace.
+          </li>
+        </ul>
       </div>
     )
   }
