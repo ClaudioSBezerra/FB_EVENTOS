@@ -34,6 +34,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
+import { user as userTable } from '@/db/schema/auth'
 import { lotReservations } from '@/db/schema/lot_reservations'
 import { lots } from '@/db/schema/lots'
 import { vendors } from '@/db/schema/vendors'
@@ -242,6 +243,46 @@ export const reserveLot = withTenantAction
   .inputSchema(reserveLotSchema)
   .action(async ({ ctx, parsedInput }) => {
     const result = await reserveLotInTenant(ctx.db, ctx.tenantId, parsedInput, ctx.userId)
+    revalidatePath(`/[slug]/marketplace`, 'page')
+    return result
+  })
+
+/**
+ * Vendor-facing reservation: resolve vendor.id via user.email automaticamente
+ * em vez de exigir que o cliente envie. Esse é o caminho usado pelo
+ * marketplace buyer view (planta-buyer-client) — o session knows o user,
+ * e ele tem 1 vendor row por tenant (lookup por email).
+ */
+export const reserveLotForCurrentVendor = withTenantAction
+  .inputSchema(reserveLotSchema.omit({ vendorId: true }))
+  .action(async ({ ctx, parsedInput }) => {
+    // Resolve vendor.id via lookup pelo email do user na tenant ativa.
+    const userRows = await ctx.db
+      .select({ email: userTable.email })
+      .from(userTable)
+      .where(eq(userTable.id, ctx.userId))
+      .limit(1)
+    const userEmail = userRows[0]?.email
+    if (!userEmail) {
+      throw new Error('Usuário não encontrado')
+    }
+    const vendorRows = await ctx.db
+      .select({ id: vendors.id })
+      .from(vendors)
+      .where(and(eq(vendors.email, userEmail), isNull(vendors.deletedAt)))
+      .limit(1)
+    const vendorId = vendorRows[0]?.id
+    if (!vendorId) {
+      throw new Error(
+        'Você ainda não tem cadastro de fornecedor neste evento. Faça o signup pelo marketplace antes de continuar.',
+      )
+    }
+    const result = await reserveLotInTenant(
+      ctx.db,
+      ctx.tenantId,
+      { ...parsedInput, vendorId },
+      ctx.userId,
+    )
     revalidatePath(`/[slug]/marketplace`, 'page')
     return result
   })
