@@ -40,7 +40,22 @@ import postgres from 'postgres'
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
+import { enqueueJob } from './enqueue'
 import { taskList } from './tasks'
+
+/**
+ * In-process scheduler for tasks whose identifiers contain dots (which
+ * graphile-worker's crontab parser rejects with regex `[_a-zA-Z][_a-zA-Z0-9-]*`).
+ * Each entry enqueues the task at a fixed interval; the actual handler still
+ * runs inside the regular worker dispatcher.
+ *
+ * Entries here intentionally use the dotted identifier — only the CRONTAB
+ * STRING parser disallows it. add_job() takes any string.
+ */
+const SCHEDULED_TASKS = [
+  { name: 'outbox.drain', intervalMs: 60_000 },
+  { name: 'reservation.expire', intervalMs: 60_000 },
+] as const
 
 /**
  * After graphile-worker creates its schema + tables (on first run), invoke
@@ -150,6 +165,32 @@ export async function startWorker(): Promise<Runner> {
   runner.events.on('pool:gracefulShutdown', ({ message }) => {
     logger.warn({ component: 'graphile-worker', message }, 'pool:gracefulShutdown')
   })
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Schedule dotted-name tasks via setInterval (workaround for
+  // graphile-worker's crontab parser limitation — see SCHEDULED_TASKS).
+  // We use a separate postgres.js connection (max 1, lazy) just for the
+  // enqueue calls. Errors are logged but do NOT crash the runner.
+  // ─────────────────────────────────────────────────────────────────────
+  const schedulerSql = postgres(env.DATABASE_URL, { max: 1 })
+  for (const job of SCHEDULED_TASKS) {
+    setInterval(() => {
+      enqueueJob(schedulerSql, job.name, {}).catch((err) => {
+        logger.warn(
+          {
+            component: 'scheduler',
+            task: job.name,
+            err: err instanceof Error ? err.message : String(err),
+          },
+          'scheduled enqueue failed — will retry next interval',
+        )
+      })
+    }, job.intervalMs).unref() // .unref() so the interval doesn't pin the process during shutdown
+    logger.info(
+      { component: 'scheduler', task: job.name, intervalMs: job.intervalMs },
+      'scheduled task armed',
+    )
+  }
 
   return runner
 }
