@@ -1,39 +1,16 @@
-// FB_EVENTOS — Signup page (Phase 0, Plan 04 — Task 2).
+// FB_EVENTOS — Signup page (2026-06-17 admin-first rework).
 //
-// Renders the LGPD-consent-aware signup form. The Card wrapper carries a
-// link to docs/LGPD.md (Plan 05 will write the file; for now the link is a
-// placeholder that resolves once Plan 05 lands).
+// Original: public signup that created a user + organização self-service.
+// After the architecture switch — operator decision — org provisioning is
+// admin-only via /admin/organizadoras. New users only exist if a super
+// admin creates them. This page now hard-redirects to /login.
+//
+// The SignupForm component remains in the codebase and will be reused by
+// the marketplace vendor-signup flow (Phase 2 plan 02-04 has dedicated
+// vendor-only entry point /fornecedor/cadastro) — that one stays public.
 
-import Link from 'next/link'
-
-import { SignupForm } from '@/components/auth/signup-form'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { redirect } from 'next/navigation'
 
 export default function SignupPage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Criar conta FB_EVENTOS</CardTitle>
-          <CardDescription>
-            Cadastre sua organização e comece a vender espaços para fornecedores.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SignupForm />
-          <p className="mt-4 text-xs text-slate-500">
-            Ao criar a conta você aceita os{' '}
-            <Link href="/docs/lgpd" className="underline">
-              Termos LGPD e Política de Privacidade
-            </Link>
-            . Já tem conta?{' '}
-            <Link href="/login" className="underline">
-              Entrar
-            </Link>
-            .
-          </p>
-        </CardContent>
-      </Card>
-    </main>
-  )
+  redirect('/login')
 }

@@ -65,6 +65,10 @@ export const user = pgTable('user', {
   consentIp: text('consent_ip'),
   // AUTH-05 — Better Auth twoFactor plugin column (added in Plan 04 migration 0003).
   twoFactorEnabled: boolean('two_factor_enabled').default(false),
+  // Global system role (migration 0022, 2026-06-17). true → can access /admin/*
+  // (CRUD of tenants + users). NO RLS — `user` is global by design. Default
+  // false so every existing row stays a regular member.
+  isSuperAdmin: boolean('is_super_admin').notNull().default(false),
   // LGPD-05 soft-delete (Plan 05 wires query helpers).
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 })

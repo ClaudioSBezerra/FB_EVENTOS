@@ -1,97 +1,19 @@
-// FB_EVENTOS — Onboarding page (post-signup / login-without-org landing).
+// FB_EVENTOS — Onboarding page (2026-06-17 admin-first rework).
 //
-// Reached when an authenticated user lands without an active organization.
-// Two entry paths:
-//   1. Brand-new user just verified email + logged in → no org yet.
-//   2. Legacy user created before the org-on-signup flow was wired → no org.
+// Original: self-service flow where a freshly verified user could create
+// their own organization via bootstrapOrganization. After the architecture
+// switch — operator decision — org provisioning is admin-only via
+// /admin/organizadoras. This page now just redirects to the root state
+// router which will land the user in the right place (login, dashboard,
+// select-org, or no-access).
 //
-// Server-side checks:
-//   - No session → redirect /login.
-//   - Session has activeOrganizationId → redirect /[slug]/dashboard.
-//   - Otherwise render the OnboardingForm client component.
+// The bootstrapOrganization Server Action remains intact (in src/lib/
+// actions/onboarding.ts) — it's used by /admin/organizadoras as the
+// underlying primitive for the admin-driven wizard. Only the user-facing
+// page goes away.
 
-import { eq } from 'drizzle-orm'
-import { headers as nextHeaders } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-import { auth } from '@/auth/server'
-import { OnboardingForm } from '@/components/onboarding/onboarding-form'
-import { organization } from '@/db/schema/auth'
-import { withTenant } from '@/db/with-tenant'
-import { logger } from '@/lib/logger'
-
-export const metadata = {
-  title: 'Configurar organização · FB_EVENTOS',
-}
-
-export default async function OnboardingPage() {
-  const h = await nextHeaders()
-  const session = await auth.api.getSession({ headers: h }).catch((err) => {
-    logger.error(
-      { err: err instanceof Error ? err.message : String(err) },
-      'onboarding_get_session_failed',
-    )
-    return null
-  })
-
-  if (!session) {
-    redirect('/login')
-  }
-
-  const activeOrgId = session.session.activeOrganizationId
-  if (activeOrgId) {
-    // Best-effort slug resolution. If the lookup throws (RLS rejection,
-    // dangling activeOrgId pointing at a missing organization, DB hiccup)
-    // we DO NOT 500 the page — we log, fall through, and let the user
-    // re-create the org via the form. That recovers users who land here
-    // with a stale session pointing at an organization that does not exist.
-    let slug: string | null = null
-    try {
-      slug = await withTenant(activeOrgId, async (scopedDb) => {
-        const rows = await scopedDb
-          .select({ slug: organization.slug })
-          .from(organization)
-          .where(eq(organization.id, activeOrgId))
-          .limit(1)
-        return rows[0]?.slug ?? null
-      })
-    } catch (err) {
-      logger.error(
-        {
-          err: err instanceof Error ? err.message : String(err),
-          activeOrgId,
-          userId: session.user.id,
-        },
-        'onboarding_slug_lookup_failed',
-      )
-    }
-    if (slug) redirect(`/${slug}/dashboard`)
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <span className="text-lg font-semibold tracking-tight">
-            FB<span className="text-emerald-600">_</span>EVENTOS
-          </span>
-          <span className="text-sm text-slate-500">{session.user.email}</span>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-xl px-6 py-12">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          Configurar sua organização
-        </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Falta um último passo: dê um nome à sua organizadora. Você poderá criar eventos, planta,
-          contratos e cobranças no painel da organização.
-        </p>
-
-        <div className="mt-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <OnboardingForm />
-        </div>
-      </main>
-    </div>
-  )
+export default function OnboardingPage() {
+  redirect('/')
 }

@@ -22,6 +22,9 @@ export const SYSTEM_PREFIXES = new Set([
   'admin',
   'docs',
   'onboarding',
+  // 2026-06-17 admin-first rework: root state router redirects to these.
+  'select-org',
+  'no-access',
   'favicon.ico',
   'robots.txt',
   'sitemap.xml',
