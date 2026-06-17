@@ -149,10 +149,18 @@ export async function checkoutCartInTenant(
     throw new Error('Fornecedor não encontrado')
   }
 
-  // 3b. Look up signed contract for lot + vendor (required for payments FK).
-  //     Phase 2 self-service: the contract must exist (created by Phase 1 org flow).
-  //     If no signed contract, reject — vendor must complete the contract step first.
-  const contractRows = await db
+  // 3b. Garantir contracts row (FK obrigatória de payments).
+  //
+  // DESIGN 2026-06-17 (operator decision): a adesão formal do vendor
+  // acontece UMA vez no signup (vendor_consents — LGPD), e a aprovação
+  // pela organizadora (vendor.status='approved') confirma a habilitação.
+  // Não exige um contrato signed POR LOTE.
+  //
+  // Mas payments.contract_id é NOT NULL com FK pra contracts.id; pra
+  // satisfazer o schema sem mudar a tabela, criamos um contracts row
+  // por compra com status='signed' (auto-aceito). Reaproveita se já
+  // existir um contrato signed pra esse (lot, vendor, event).
+  const existingContractRows = await db
     .select({ id: contracts.id })
     .from(contracts)
     .where(
@@ -165,11 +173,23 @@ export async function checkoutCartInTenant(
       ),
     )
     .limit(1)
-  const contract = contractRows[0]
+  let contract = existingContractRows[0]
   if (!contract) {
-    throw new Error(
-      'Contrato assinado não encontrado para este lote — aguarde o contrato ser assinado antes de prosseguir',
-    )
+    const inserted = await db
+      .insert(contracts)
+      .values({
+        tenantId,
+        vendorId,
+        lotId: reservation.lotId,
+        eventId: reservation.eventId,
+        templateVersion: 'fornecedor-stand-v1',
+        status: 'signed',
+      })
+      .returning({ id: contracts.id })
+    contract = inserted[0]
+    if (!contract) {
+      throw new Error('checkoutCartInTenant: falha ao criar contrato auto-signed')
+    }
   }
 
   // 4. Compute cart total = lot price (centavos) + add-on snapshot sum.
