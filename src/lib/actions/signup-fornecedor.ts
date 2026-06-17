@@ -268,7 +268,12 @@ export async function signupFornecedorForTenant(
     return {
       vendorId: vendor.id,
       userId,
-      redirectTo: `/${slug}/portal`,
+      // Plan 02-08 (vendor portal) ainda não executado — /portal retorna 404.
+      // Por ora redireciona pra /{slug}/marketplace que já existe e mostra
+      // os eventos abertos pro vendor reservar lote. Aprovação da
+      // organizadora ainda é gating (vendor.status='pending' bloqueia
+      // reserveLotForCurrentVendor).
+      redirectTo: `/${slug}/marketplace`,
     }
   })
 
