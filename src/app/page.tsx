@@ -27,6 +27,7 @@ import { checkSuperAdmin } from '@/auth/super-admin'
 import { organization } from '@/db/schema/auth'
 import { withTenant } from '@/db/with-tenant'
 import { listUserMemberships } from '@/lib/auth/memberships'
+import { setActiveOrganizationForSession } from '@/lib/auth/set-active-org'
 
 export default async function Home() {
   const h = await nextHeaders()
@@ -58,7 +59,17 @@ export default async function Home() {
 
   if (memberships.length === 0) redirect('/no-access')
   if (memberships.length === 1) {
-    redirect(`/${memberships[0]?.slug}/dashboard`)
+    // Single membership: flip session.active_organization_id BEFORE
+    // redirecting. Without this, the dashboard's activeOrgId !== tenant.id
+    // guard 403s (the freshly-logged-in user has session.active_org = NULL).
+    // setActiveOrganizationForSession also sets session.tenant_id so
+    // downstream withTenant() calls have a non-NULL fallback. Best-effort:
+    // if the UPDATE fails (rare; RLS regression, FK error), we still
+    // redirect — the dashboard will 403 with a clear message instead of
+    // looping back here.
+    const m = memberships[0]!
+    await setActiveOrganizationForSession(session.session.id, m.organizationId).catch(() => null)
+    redirect(`/${m.slug}/dashboard`)
   }
   redirect('/select-org')
 }
