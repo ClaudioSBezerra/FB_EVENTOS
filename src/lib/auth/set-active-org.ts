@@ -101,19 +101,39 @@ export async function setActiveOrganizationForSession(
   sessionId: string,
   organizationId: string,
 ): Promise<boolean> {
-  const tenantId = await lookupTenantIdForOrganization(organizationId)
-  if (!tenantId) return false
-  // Use appPool with SET LOCAL app.current_tenant_id so RLS permits the
-  // UPDATE (the session row is tenant-scoped; the policy permits NULL
-  // tenant_id OR tenant_id matches the setting). We scope to the
-  // RESOLVED tenant_id — the new value matches the setting, so the
-  // WITH CHECK clause is satisfied.
+  // We DELIBERATELY KEEP session.tenant_id = NULL after this UPDATE.
+  //
+  // The session table's RLS policy is:
+  //   tenant_id IS NULL OR tenant_id = NULLIF(current_setting(...), '')::uuid
+  //
+  // If we set tenant_id = Y, then every subsequent `auth.api.getSession()`
+  // call (which reads `session` via the singleton db with NO GUC set)
+  // evaluates the policy as `Y = NULL → false`, so getSession returns 0
+  // rows and the user appears logged out — exactly the bug reported on
+  // 2026-06-17 when Fabricia clicked "Acessar como organizadora" and
+  // ended up bounced to /login.
+  //
+  // Keeping tenant_id NULL means the `IS NULL` branch always permits
+  // Better Auth's token-lookup, regardless of the (absent) GUC. All
+  // tenant-scoped reads downstream derive context from
+  // session.active_organization_id (= tenant.id by Phase 0 invariant),
+  // never from session.tenant_id. Mirrors the same decision made in
+  // bootstrapOrganization (commit e8f8548) — keep both helpers
+  // consistent.
   const rows = await appPool.begin<{ id: string }[]>(async (tx) => {
-    await tx`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`
+    // We still set the GUC because the UPDATE itself runs as fb_eventos_app
+    // (NOBYPASSRLS) and the policy's USING clause needs SOMETHING to
+    // match. With tenant_id IS NULL pre-UPDATE the USING already passes
+    // via the IS NULL branch; we set the GUC to the resolved tenantId
+    // anyway as belt-and-suspenders in case the session row was somehow
+    // touched earlier and tenant_id is already non-NULL.
+    const tenantId = await lookupTenantIdForOrganization(organizationId)
+    if (tenantId) {
+      await tx`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`
+    }
     return tx<{ id: string }[]>`
       UPDATE session
          SET active_organization_id = ${organizationId},
-             tenant_id              = ${tenantId},
              updated_at             = now()
        WHERE id = ${sessionId}
        RETURNING id
