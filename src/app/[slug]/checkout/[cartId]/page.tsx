@@ -100,10 +100,15 @@ export default async function CheckoutPage({ params }: PageProps) {
 
   const { reservation, lot, category, addonLines, eventAddonsList } = data
 
-  // 4. Compute lot price.
-  const lotPriceCents = computeLotPrice(
-    { baseFixed: category.baseFixed, perSqmRate: category.perSqmRate },
-    { areaM2: lot.areaM2 },
+  // 4. Compute lot price. computeLotPrice retorna em REAIS (R$ 500.00 →
+  // 500). Convertemos pra centavos pra alinhar com o contrato da
+  // CheckoutSidebar (que faz cents / 100 internamente). Sem o *100 abaixo,
+  // R$ 500,00 aparecia como R$ 5,00 no UI (bug reportado em prod 2026-06-17).
+  const lotPriceCents = Math.round(
+    computeLotPrice(
+      { baseFixed: category.baseFixed, perSqmRate: category.perSqmRate },
+      { areaM2: lot.areaM2 },
+    ) * 100,
   )
 
   // 5. Build add-on props for the sidebar.
