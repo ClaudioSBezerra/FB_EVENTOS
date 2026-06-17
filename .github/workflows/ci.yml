@@ -310,9 +310,17 @@ jobs:
           COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${COOLIFY_WEBHOOK_URL}" ]; then
-            echo "::error::COOLIFY_DEPLOY_WEBHOOK_URL secret não configurado. Pule este step ou configure no Settings."
-            exit 1
+          # Skip-friendly: se os secrets ainda não estão configurados, o
+          # job vira no-op em vez de falhar — assim o Coolify webhook
+          # nativo continua respondendo ao push enquanto o operador
+          # termina de configurar o gating. Quando os secrets forem
+          # adicionados, esse step assume e o operador deve desligar o
+          # auto-deploy do Coolify pra evitar disparo duplo.
+          if [ -z "${COOLIFY_WEBHOOK_URL}" ] || [ -z "${COOLIFY_DEPLOY_TOKEN}" ]; then
+            echo "::warning::COOLIFY_DEPLOY_WEBHOOK_URL e/ou COOLIFY_DEPLOY_TOKEN não configurados."
+            echo "::warning::Pule este step OU configure os 2 secrets em Settings → Secrets → Actions."
+            echo "::warning::Enquanto isso, deploy depende do webhook nativo do Coolify (Auto Deploy on Push)."
+            exit 0
           fi
           # Webhooks do Coolify aceitam GET + Authorization Bearer OU
           # POST + query param. Usamos POST + Authorization pra ficar
