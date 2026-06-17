@@ -23,36 +23,18 @@
 'use client'
 
 import type { KonvaEventObject } from 'konva/lib/Node'
-import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-
+// react-konva touches `window.Konva` on import. Em vez de fazer dynamic
+// individual de cada componente (frágil — gera React error #306 e
+// "Cannot use 'in' operator" dependendo do bundler), importamos normal
+// AQUI e o componente PAI (PlantaEditor) é carregado via
+// `next/dynamic({ ssr: false })` na page (src/app/[slug]/eventos/[eventId]/
+// planta/page.tsx). Esse é o pattern oficial recomendado pelo react-konva
+// pra Next.js 13+.
+import { Image as KImage, Layer, Line, Stage, Transformer } from 'react-konva'
 import { Button } from '@/components/ui/button'
 import { createLot, deleteLot, type PersistedLotRow, updateLotGeometry } from '@/lib/actions/lots'
 import type { Geometry, Polygon2DGeometry } from '@/lib/validators/geometry'
-
-// react-konva touches `window.Konva` on import → dynamic import to keep it
-// out of the SSR bundle.
-// IMPORTANTE: Next.js 15 dynamic() exige que o factory retorne um objeto
-// com `.default` apontando pro componente. react-konva exporta os
-// componentes como named exports (m.Stage, m.Layer, …) — passar
-// `(m) => m.Layer` direto faz o Next.js bater no `Cannot use 'in' operator
-// to search for 'default' in Layer` quando hidrata o componente.
-// Envolver em `{ default: m.X }` é a forma canônica.
-const Stage = dynamic(() => import('react-konva').then((m) => ({ default: m.Stage })), {
-  ssr: false,
-})
-const Layer = dynamic(() => import('react-konva').then((m) => ({ default: m.Layer })), {
-  ssr: false,
-})
-const KImage = dynamic(() => import('react-konva').then((m) => ({ default: m.Image })), {
-  ssr: false,
-})
-const Line = dynamic(() => import('react-konva').then((m) => ({ default: m.Line })), {
-  ssr: false,
-})
-const Transformer = dynamic(() => import('react-konva').then((m) => ({ default: m.Transformer })), {
-  ssr: false,
-})
 
 const STAGE_WIDTH = 1200
 const STAGE_HEIGHT = 800

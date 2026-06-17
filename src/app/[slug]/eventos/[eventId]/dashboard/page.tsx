@@ -15,7 +15,8 @@ import { notFound, redirect } from 'next/navigation'
 
 import { auth } from '@/auth/server'
 import { OccupancyCards } from '@/components/dashboard/occupancy-cards'
-import { type DashboardLotMeta, PlantaEditor } from '@/components/eventos/planta-editor'
+import type { DashboardLotMeta } from '@/components/eventos/planta-editor'
+import { PlantaEditorClient } from '@/components/eventos/planta-editor-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { lotCategories } from '@/db/schema/lots'
@@ -155,7 +156,7 @@ export default async function EventoDashboardPage({ params }: PageProps) {
                 </Link>
               </p>
             ) : (
-              <PlantaEditor
+              <PlantaEditorClient
                 eventId={eventId}
                 plantaUrl={plantaUrl}
                 plantaContentType={event.plantaContentType}

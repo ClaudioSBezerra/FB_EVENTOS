@@ -10,9 +10,8 @@
 'use client'
 
 import { useState } from 'react'
-
 import type { DashboardLotMeta } from '@/components/eventos/planta-editor'
-import { PlantaEditor } from '@/components/eventos/planta-editor'
+import { PlantaEditorClient } from '@/components/eventos/planta-editor-client'
 import type { PersistedLotRow } from '@/lib/actions/lots'
 
 interface DashboardLotItem {
@@ -73,7 +72,7 @@ export function PlantaBuyerClient({
     <div className="flex gap-6">
       {/* Planta canvas */}
       <div className="flex-1">
-        <PlantaEditor
+        <PlantaEditorClient
           eventId={eventId}
           plantaUrl={plantaUrl}
           plantaContentType={null}
