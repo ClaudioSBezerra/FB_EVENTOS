@@ -277,6 +277,60 @@ jobs:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
   # =========================================================================
+  # Job 7 — deploy-coolify (2026-06-17)
+  # Dispara o deploy no Coolify SÓ depois de todos os gates passarem.
+  # Substitui o webhook automático do GitHub que Coolify estava registrando
+  # (que disparava deploy em paralelo com os testes, podendo deployar
+  # commit com testes falhos). Configurar:
+  #   1. Coolify UI → Application → Webhooks → copia URL do "Manual Deploy"
+  #   2. Coolify UI → API → cria token de API (ou usa webhook secret)
+  #   3. GitHub repo → Settings → Secrets → adiciona:
+  #      - COOLIFY_DEPLOY_WEBHOOK_URL = URL do webhook (com app uuid)
+  #      - COOLIFY_DEPLOY_TOKEN       = bearer token API ou ?token= query
+  #   4. Coolify UI → Application → Source → DESATIVA "Automatic Deploy on
+  #      Git push" pra evitar deploy duplo (esse job assume o controle).
+  # =========================================================================
+  deploy-coolify:
+    name: Deploy to Coolify
+    runs-on: ubuntu-latest
+    # Só dispara em push na main; PRs não deployam.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Todos os gates precisam passar antes de deploy.
+    needs:
+      - anti-pitfall-gates
+      - secrets-scan
+      - lint-typecheck
+      - test
+      - build
+      - verify-no-latest-in-workflows
+    steps:
+      - name: Trigger Coolify deploy
+        env:
+          COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK_URL }}
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${COOLIFY_WEBHOOK_URL}" ]; then
+            echo "::error::COOLIFY_DEPLOY_WEBHOOK_URL secret não configurado. Pule este step ou configure no Settings."
+            exit 1
+          fi
+          # Webhooks do Coolify aceitam GET + Authorization Bearer OU
+          # POST + query param. Usamos POST + Authorization pra ficar
+          # consistente com a API moderna.
+          http_code=$(curl -sS -o /tmp/coolify-response -w '%{http_code}' \
+            -X POST "${COOLIFY_WEBHOOK_URL}" \
+            -H "Authorization: Bearer ${COOLIFY_DEPLOY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"git_ref\":\"${GITHUB_SHA}\"}")
+          echo "Coolify response: ${http_code}"
+          cat /tmp/coolify-response || true
+          if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
+            echo "::error::Coolify retornou HTTP ${http_code}. Deploy abortado."
+            exit 1
+          fi
+          echo "::notice::Deploy disparado no Coolify (commit ${GITHUB_SHA::8})."
+
+  # =========================================================================
   # Job 6 — verify-no-latest-in-workflows (T-0-07)
   # Final PR-blocking grep gate. If `:latest` reappears in workflows/, dockerfiles,
   # or compose files, fail before merge. Pairs with build-and-push.yml's
