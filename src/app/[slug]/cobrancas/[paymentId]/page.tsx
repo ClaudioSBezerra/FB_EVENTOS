@@ -4,10 +4,12 @@ import { headers as nextHeaders } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 
 import { auth } from '@/auth/server'
+import { PaymentSimulatorPanel } from '@/components/checkout/payment-simulator-panel'
 import { PixQr } from '@/components/payments/pix-qr'
 import { withTenant } from '@/db/with-tenant'
 import { getPaymentByIdInTenant } from '@/lib/actions/payments'
 import { formatBRL } from '@/lib/lots/price'
+import { isSimulatedOrderId } from '@/lib/pagarme/simulator'
 import { resolveTenantBySlug } from '@/lib/tenant'
 
 interface PageProps {
@@ -73,8 +75,17 @@ export default async function PaymentDetailPage({ params }: PageProps) {
         )}
       </dl>
 
+      {/* Payment simulator (piloto pré-credencial Pagar.me) — só aparece
+          quando o pagamento foi criado pelo simulador (gatewayOrderId
+          começa com SIM_) E está pendente. */}
+      {detail.payment.status === 'pending' && isSimulatedOrderId(detail.payment.gatewayOrderId) && (
+        <PaymentSimulatorPanel paymentId={detail.payment.id} tenantId={detail.payment.tenantId} />
+      )}
+
+      {/* PIX QR — só pra pagamentos PIX REAIS (sem SIM_). */}
       {detail.payment.method === 'pix' &&
         detail.payment.status === 'pending' &&
+        !isSimulatedOrderId(detail.payment.gatewayOrderId) &&
         detail.pix_qr_url &&
         detail.pix_copy_paste && (
           <PixQr qrUrl={detail.pix_qr_url} copyPaste={detail.pix_copy_paste} />

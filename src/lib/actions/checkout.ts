@@ -52,6 +52,7 @@ import { recordAudit } from '@/lib/audit'
 import { computeLotPrice } from '@/lib/lots/price'
 import { createOrder } from '@/lib/pagarme/client'
 import { computeInstallmentAmount } from '@/lib/pagarme/installments-shape.generated'
+import { createSimulatedOrder, shouldUseSimulator } from '@/lib/pagarme/simulator'
 import { PagarmeApiError, type PagarmeOrderCreateRequest } from '@/lib/pagarme/types'
 import { type CheckoutCartInput, checkoutCartSchema } from '@/lib/validators/checkout'
 
@@ -256,20 +257,31 @@ export async function checkoutCartInTenant(
     throw err
   }
 
-  // 9. POST to Pagar.me API.
+  // 9. POST to Pagar.me API — OR call the simulator when the operator
+  //    has set PAYMENT_SIMULATOR_ENABLED=true (piloto pré-credencial).
+  //    The simulator returns the same response shape so steps 10-13 don't
+  //    need to branch.
   let pagarmeResponse: Awaited<ReturnType<typeof createOrder>>
-  try {
-    pagarmeResponse = await createOrder(orderRequest, idempotencyKey)
-  } catch (err) {
-    const failureReason = err instanceof PagarmeApiError ? `Pagar.me ${err.status}` : String(err)
-    await recordAuditOutOfBand(tenantId, {
-      action: 'payment.create_failed',
-      entity: 'payment',
-      entityId: payment.id,
-      userId,
-      payload: { reservation_id: input.reservationId, method: input.method, error: failureReason },
-    })
-    throw err
+  if (shouldUseSimulator()) {
+    pagarmeResponse = createSimulatedOrder(orderRequest, idempotencyKey)
+  } else {
+    try {
+      pagarmeResponse = await createOrder(orderRequest, idempotencyKey)
+    } catch (err) {
+      const failureReason = err instanceof PagarmeApiError ? `Pagar.me ${err.status}` : String(err)
+      await recordAuditOutOfBand(tenantId, {
+        action: 'payment.create_failed',
+        entity: 'payment',
+        entityId: payment.id,
+        userId,
+        payload: {
+          reservation_id: input.reservationId,
+          method: input.method,
+          error: failureReason,
+        },
+      })
+      throw err
+    }
   }
 
   // 10. Persist gateway IDs + response payload.

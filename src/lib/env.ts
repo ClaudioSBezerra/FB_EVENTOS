@@ -128,6 +128,25 @@ const envSchema = z.object({
   // See docs/adr/0005-webhook-hmac-strategy.md for the full HMAC contract.
   PAGARME_WEBHOOK_SIGNING_SECRET: z.string().optional(),
 
+  // ─────────────────────────────────────────────────────────────────────
+  // Payment simulator (2026-06-17 piloto pré-credencial-Pagarme).
+  //
+  // When 'true', checkout.ts bypasses the Pagar.me API and returns a fake
+  // PagarmeOrderResponse with id = SIM_<uuid>. The checkout page then
+  // renders a panel with "Simular Aprovado / Recusado" buttons that emit
+  // the matching outbox events directly. Outbox-drain processes them
+  // exactly as if a real webhook had landed (lot marked sold, email
+  // enqueued, etc.).
+  //
+  // 🔴 DO NOT keep this 'true' in real production. The simulator panel
+  //    exposes payment status flips to anyone with the checkout URL.
+  //    Disable as soon as Fabricia (GoTo/GRU) issues the real Pagar.me
+  //    credentials.
+  PAYMENT_SIMULATOR_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
+
   // App
   NEXT_PUBLIC_APP_URL: z.url('NEXT_PUBLIC_APP_URL must be a valid URL'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
