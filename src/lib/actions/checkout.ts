@@ -40,6 +40,7 @@ import { randomBytes } from 'node:crypto'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
+import { user as userTable } from '@/db/schema/auth'
 import { cartAddonLines } from '@/db/schema/cart_addon_lines'
 import { contracts } from '@/db/schema/contracts'
 import { lotReservations } from '@/db/schema/lot_reservations'
@@ -391,11 +392,37 @@ function isUniqueViolation(err: unknown): boolean {
 export const startCheckout = withTenantAction
   .inputSchema(checkoutCartSchema)
   .action(async ({ ctx, parsedInput }) => {
+    // Resolve vendor.id do user autenticado. vendors.id ≠ user.id por
+    // design (vendor é cadastro pj, gerado com UUID próprio em
+    // createVendorInTenant). Em vez do hack legado de Phase 2 que passava
+    // userId como vendorId, fazemos lookup explícito via email matching
+    // dentro do tenant ativo. Se o user não tem vendor cadastrado, falha
+    // com mensagem amigável.
+    const userRows = await ctx.db
+      .select({ email: userTable.email })
+      .from(userTable)
+      .where(eq(userTable.id, ctx.userId))
+      .limit(1)
+    const userEmail = userRows[0]?.email
+    if (!userEmail) {
+      throw new Error('Usuário não encontrado')
+    }
+    const vendorRows = await ctx.db
+      .select({ id: vendors.id })
+      .from(vendors)
+      .where(and(eq(vendors.email, userEmail), isNull(vendors.deletedAt)))
+      .limit(1)
+    const vendorId = vendorRows[0]?.id
+    if (!vendorId) {
+      throw new Error(
+        'Você ainda não tem cadastro de fornecedor neste evento. Faça o signup pelo marketplace antes de continuar.',
+      )
+    }
     const result = await checkoutCartInTenant(
       ctx.db,
       ctx.tenantId,
       parsedInput,
-      ctx.userId, // vendorId = authenticated user in Phase 2
+      vendorId,
       ctx.userId,
     )
     revalidatePath('/[slug]/checkout/[cartId]', 'page')
