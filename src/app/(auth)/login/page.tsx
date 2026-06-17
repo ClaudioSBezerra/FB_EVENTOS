@@ -26,21 +26,23 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-slate-400">Plataforma de gestão de grandes eventos.</p>
         </div>
 
-        {/* Centro: logo da cofundadora + tagline */}
+        {/* Centro: logo da cofundadora — a imagem já inclui as taglines
+            "Gerando Resultados / Conectando Oportunidades", então o texto
+            externo é só uma chip discreta acima. */}
         <div className="flex flex-col items-center">
-          <div className="relative h-32 w-64">
+          <span className="mb-6 inline-flex rounded-full border border-slate-700 px-3 py-1 text-xs font-medium uppercase tracking-widest text-slate-400">
+            Cofundadora
+          </span>
+          <div className="relative h-44 w-80">
             <Image
               src="/partners/gru-logo.png"
               alt="GRU — Gerando Resultados, Conectando Oportunidades"
               fill
               priority
-              sizes="(min-width: 768px) 256px, 0px"
+              sizes="(min-width: 768px) 320px, 0px"
               className="object-contain"
             />
           </div>
-          <p className="mt-6 text-center text-sm uppercase tracking-widest text-slate-400">
-            Cofundadora
-          </p>
         </div>
 
         {/* Rodapé */}
