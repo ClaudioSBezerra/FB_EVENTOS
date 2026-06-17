@@ -23,8 +23,9 @@ import { headers as nextHeaders } from 'next/headers'
 import { z } from 'zod'
 
 import { auth } from '@/auth/server'
+import { contracts } from '@/db/schema/contracts'
 import { lotReservations } from '@/db/schema/lot_reservations'
-import { pagarmeOrders, payments } from '@/db/schema/payments'
+import { payments } from '@/db/schema/payments'
 import { withTenant } from '@/db/with-tenant'
 import { recordAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
@@ -90,24 +91,24 @@ async function findReservationByPayment(
   paymentId: string,
 ): Promise<{ id: string; lotId: string; eventId: string } | null> {
   return withTenant(tenantId, async (db) => {
-    // The contract → reservation chain isn't a direct FK in payments;
-    // Phase 2 plan 02-05 wires it via cart/reservation snapshots. Best
-    // effort: pull the live (not released) reservation matching the
-    // payment's contract via the contracts → reservation join.
-    // For the simulator we keep it simple: find ANY active reservation
-    // tagged with this payment's method window — the action also tries
-    // pagarme_orders.requestPayload.metadata.reservation_id if it was
-    // stored there at checkout time.
-    const orderRows = await db
-      .select({ requestPayload: pagarmeOrders.requestPayload })
-      .from(pagarmeOrders)
-      .where(eq(pagarmeOrders.paymentId, paymentId))
+    // Resolve reservation via payment → contract → (lot+event+vendor) →
+    // reservation. O pagarme_orders.requestPayload NÃO tem metadata.reservation_id
+    // no checkout real (verificado em prod 2026-06-17: simulador
+    // emitia payment.paid SEM lot_id, e o handler outbox.payment-paid
+    // pulava o UPDATE de lots → lot ficava 'available' eternamente).
+    // O contract tem todos os IDs necessários pra achar a reserva ativa.
+    const contractRows = await db
+      .select({
+        lotId: contracts.lotId,
+        eventId: contracts.eventId,
+        vendorId: contracts.vendorId,
+      })
+      .from(contracts)
+      .innerJoin(payments, eq(payments.contractId, contracts.id))
+      .where(eq(payments.id, paymentId))
       .limit(1)
-    const reqPayload = orderRows[0]?.requestPayload as
-      | { metadata?: { reservation_id?: string } }
-      | undefined
-    const reservationId = reqPayload?.metadata?.reservation_id
-    if (!reservationId) return null
+    const c = contractRows[0]
+    if (!c) return null
 
     const reservRows = await db
       .select({
@@ -116,9 +117,18 @@ async function findReservationByPayment(
         eventId: lotReservations.eventId,
       })
       .from(lotReservations)
-      .where(eq(lotReservations.id, reservationId))
+      .where(
+        and(
+          eq(lotReservations.lotId, c.lotId),
+          eq(lotReservations.vendorId, c.vendorId),
+          eq(lotReservations.eventId, c.eventId),
+        ),
+      )
+      .orderBy(lotReservations.reservedAt)
       .limit(1)
-    return reservRows[0] ?? null
+    if (reservRows[0]) return reservRows[0]
+    // Fallback: contract tem os IDs do lote/evento mesmo sem reserva ativa.
+    return { id: '', lotId: c.lotId, eventId: c.eventId }
   })
 }
 
