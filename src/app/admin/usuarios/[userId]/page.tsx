@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { AdminResetPasswordForm } from '@/components/admin/reset-password-form'
 import { UserMembershipsManager } from '@/components/admin/user-memberships-manager'
 import { Button } from '@/components/ui/button'
 import { db } from '@/db'
@@ -90,6 +91,8 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
           availableOrgs={availableOrgs}
         />
       </section>
+
+      <AdminResetPasswordForm userId={u.id} userEmail={u.email} />
     </main>
   )
 }

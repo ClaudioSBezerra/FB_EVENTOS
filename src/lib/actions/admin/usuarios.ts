@@ -208,6 +208,73 @@ export async function detachUserFromOrg(raw: unknown): Promise<DetachResult> {
 }
 
 // ────────────────────────────────────────────────────────────────────
+// adminResetPassword — set new password + mark email_verified
+// ────────────────────────────────────────────────────────────────────
+//
+// Caminho de emergência pra quando o fluxo normal de reset por email
+// não funciona (SMTP off, conta com email não verificado, etc).
+// super_admin define uma nova senha + força email_verified=true.
+// Usa o hashPassword do better-auth/crypto pra garantir hash compatível
+// com o algoritmo do Better Auth (scrypt).
+
+const resetPasswordSchema = z.object({
+  userId: z.string().uuid(),
+  newPassword: z.string().min(10).max(200),
+})
+
+export type AdminResetPasswordResult =
+  | { ok: true }
+  | {
+      ok: false
+      error: 'invalid_input' | 'user_not_found' | 'no_credential_account' | 'update_failed'
+    }
+
+export async function adminResetUserPassword(raw: unknown): Promise<AdminResetPasswordResult> {
+  await requireSuperAdmin()
+  const parsed = resetPasswordSchema.safeParse(raw)
+  if (!parsed.success) return { ok: false, error: 'invalid_input' }
+
+  try {
+    const { hashPassword } = await import('better-auth/crypto')
+    const hash = await hashPassword(parsed.data.newPassword)
+
+    // Update password no account (provider_id='credential') + força
+    // email_verified=true pra desbloquear login imediato.
+    const { account } = await import('@/db/schema/auth')
+    const accountRows = await db
+      .update(account)
+      .set({ password: hash, updatedAt: new Date() })
+      .where(and(eq(account.userId, parsed.data.userId), eq(account.providerId, 'credential')))
+      .returning({ id: account.id })
+
+    if (accountRows.length === 0) {
+      return { ok: false, error: 'no_credential_account' }
+    }
+
+    await db
+      .update(userTable)
+      .set({ emailVerified: true, updatedAt: new Date() })
+      .where(eq(userTable.id, parsed.data.userId))
+
+    // Invalida sessões antigas pra forçar re-login com a nova senha.
+    const { session } = await import('@/db/schema/auth')
+    await db.delete(session).where(eq(session.userId, parsed.data.userId))
+
+    logger.info({ userId: parsed.data.userId }, 'admin_reset_user_password_success')
+  } catch (err) {
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err), userId: parsed.data.userId },
+      'admin_reset_user_password_failed',
+    )
+    return { ok: false, error: 'update_failed' }
+  }
+
+  revalidatePath('/admin/usuarios')
+  revalidatePath(`/admin/usuarios/${parsed.data.userId}`)
+  return { ok: true }
+}
+
+// ────────────────────────────────────────────────────────────────────
 // setSuperAdmin — toggle global flag
 // ────────────────────────────────────────────────────────────────────
 
