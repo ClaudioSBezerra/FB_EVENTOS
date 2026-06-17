@@ -12,7 +12,7 @@ import { z } from 'zod'
 // Configuration constants — ORG-02 contract
 // ────────────────────────────────────────────────────────────────────────────
 
-export const PLANTA_MAX_BYTES = 25 * 1024 * 1024 // 25 MB (ORG-02)
+export const PLANTA_MAX_BYTES = 200 * 1024 * 1024 // 200 MB (2026-06-17 operator request — plantas PDF de eventos grandes podem passar de 100 MB)
 export const PLANTA_PUT_TTL_SECONDS = 300 // 5 min (D-05)
 export const PLANTA_GET_TTL_SECONDS = 900 // 15 min (D-06)
 
@@ -32,7 +32,7 @@ export const mintPlantaUploadInput = z.object({
     .number()
     .int('Tamanho deve ser inteiro')
     .min(1, 'Tamanho mínimo 1 byte')
-    .max(PLANTA_MAX_BYTES, `Tamanho máximo é ${PLANTA_MAX_BYTES} bytes (25 MB)`),
+    .max(PLANTA_MAX_BYTES, `Tamanho máximo é ${PLANTA_MAX_BYTES} bytes (200 MB)`),
 })
 export type MintPlantaUploadInput = z.infer<typeof mintPlantaUploadInput>
 

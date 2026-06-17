@@ -16,6 +16,7 @@ import { db } from '@/db'
 import { member, organization, user as userTable } from '@/db/schema/auth'
 import { tenants } from '@/db/schema/tenants'
 import { logger } from '@/lib/logger'
+import { getMinIOClient, getTenantBucket } from '@/lib/storage/minio'
 import { SYSTEM_PREFIXES } from '@/lib/tenant-prefixes'
 
 const slugRegex = /^[a-z][a-z0-9-]{2,30}$/
@@ -144,6 +145,25 @@ export async function createOrganizadora(raw: unknown): Promise<CreateOrganizado
       return { ok: false, error: 'slug_taken' }
     }
     return { ok: false, error: 'create_failed' }
+  }
+
+  // 5. Provision the MinIO bucket for this tenant. getTenantBucket returns
+  //    `${slug}-uploads`. makeBucket is idempotent in our MinIO client
+  //    via bucketExists pre-check. Best-effort: a failure here only logs
+  //    — the org is already created and the operator can run mc mb later.
+  try {
+    const bucket = getTenantBucket(orgSlug)
+    const client = getMinIOClient()
+    const exists = await client.bucketExists(bucket).catch(() => false)
+    if (!exists) {
+      await client.makeBucket(bucket)
+      logger.info({ bucket, orgSlug, newTenantId }, 'minio_bucket_provisioned')
+    }
+  } catch (err) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err), orgSlug, newTenantId },
+      'minio_bucket_provision_failed',
+    )
   }
 
   revalidatePath('/admin')
