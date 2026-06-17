@@ -32,11 +32,25 @@ import type { Geometry, Polygon2DGeometry } from '@/lib/validators/geometry'
 
 // react-konva touches `window.Konva` on import → dynamic import to keep it
 // out of the SSR bundle.
-const Stage = dynamic(() => import('react-konva').then((m) => m.Stage), { ssr: false })
-const Layer = dynamic(() => import('react-konva').then((m) => m.Layer), { ssr: false })
-const KImage = dynamic(() => import('react-konva').then((m) => m.Image), { ssr: false })
-const Line = dynamic(() => import('react-konva').then((m) => m.Line), { ssr: false })
-const Transformer = dynamic(() => import('react-konva').then((m) => m.Transformer), {
+// IMPORTANTE: Next.js 15 dynamic() exige que o factory retorne um objeto
+// com `.default` apontando pro componente. react-konva exporta os
+// componentes como named exports (m.Stage, m.Layer, …) — passar
+// `(m) => m.Layer` direto faz o Next.js bater no `Cannot use 'in' operator
+// to search for 'default' in Layer` quando hidrata o componente.
+// Envolver em `{ default: m.X }` é a forma canônica.
+const Stage = dynamic(() => import('react-konva').then((m) => ({ default: m.Stage })), {
+  ssr: false,
+})
+const Layer = dynamic(() => import('react-konva').then((m) => ({ default: m.Layer })), {
+  ssr: false,
+})
+const KImage = dynamic(() => import('react-konva').then((m) => ({ default: m.Image })), {
+  ssr: false,
+})
+const Line = dynamic(() => import('react-konva').then((m) => ({ default: m.Line })), {
+  ssr: false,
+})
+const Transformer = dynamic(() => import('react-konva').then((m) => ({ default: m.Transformer })), {
   ssr: false,
 })
 
