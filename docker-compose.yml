@@ -231,6 +231,13 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # CORS allowlist (2026-06-17): planta-editor.tsx faz `img.crossOrigin =
+      # 'anonymous'` antes de carregar o background. Sem cabeçalho
+      # Access-Control-Allow-Origin no GET pre-signed do MinIO, o browser
+      # bloqueia e o canvas fica em branco. MINIO_API_CORS_ALLOW_ORIGIN
+      # aceita vírgula-separados ou '*' (allow-all). Restringimos aos
+      # domínios do app por boa prática.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_API_CORS_ALLOW_ORIGIN:-https://eventos.fbtax.cloud,http://localhost:3000}
       # MINIO_BROWSER_REDIRECT_URL intentionally NOT set in the compose default.
       # When MinIO can't validate the redirect URL (DNS not propagated yet) it
       # exits during startup. Set this in Coolify env UI ONLY AFTER you point
